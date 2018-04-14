@@ -1,0 +1,27 @@
+## Git ignore file
+
+## emacs things
+*~
+\#*\#
+
+## C binaries and object files
+*.o
+cutest*
+cutime*
+cptest*
+*.so
+
+## large data files
+*crap*
+big*.csv
+clean*.csv
+noisy*csv
+
+## data / plot files
+*.pdf
+*.png
+*.csv
+*.txt
+
+## misc other
+
