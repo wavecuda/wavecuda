@@ -1,26 +1,18 @@
-## Makefile for building wavecuda library
+## Makefile for building CUDA/CPP programs
+## make nocuda for platforms without CUDA
+## make perf for just the optimised (performance) executables
+## make debug for debuggable executables
+## make clean to clean up executables, object files, backup files and profile outputs
 
 ## written by Julian Waton
 
-include config.mk
-
-# File with functions calling everything
-
-R_FUNCS = rfunctions.cu
-
-## Our shared library file
-SH_LIB = wavecuda.so
-
-INCS := -I. -I"$(CUDA_INC)" -I"$(R_INC)"
-LD_PARAMS := $(DEVICEOPTS) -Xlinker '$(RPATH) $(R_FRAMEWORK)'
-LIBS :=  -L"$(R_LIB)" -L"$(CUDA_LIB)"
-
+## to do...add Windows compatibility
 
 SHELL = /bin/sh
 
 ## CPP variables
 CC = gcc
-CFLAGS = -Wall -Wextra -fopenmp -fpic ## fpic required for R shared library
+CFLAGS = -Wall -Wextra -fopenmp
 G = -g3 -pg
 OPT = -O3 -ffast-math
 
@@ -30,17 +22,19 @@ HEADS = utils.h wvtheads.h wavutils.h transform.h
 OS = utils.o wavutils.o
 WOS = daub4.o haar.o la8.o c6.o thresh.o
 TOS = transform.o
-LIBS = -lm -lstdc++ -lcudart #for cuda runtime API linkage
+LIBS = -lm -lstdc++
+EXES = cptesthaar cptestdaub4 cptestcvt cptestla8 cptestc6 cptesttransform
 PROF = gmon.out
 
 
 ## CUDA variables
 CUC = nvcc
-CUFLAGS = -arch=sm_30 -m 64 -Xcompiler -Wall -Xcompiler -Wextra -Xcompiler -fopenmp -Xcompiler -fpic
+CUFLAGS = -arch=sm_30 -m 64 -Xcompiler -Wall -Xcompiler -Wextra -Xcompiler -fopenmp
 CUG = -g -G -Xcompiler -g -pg
 CUOPT = -use_fast_math
 CULINK = -dc
 
+CUMAINS = testdaub4cuda.cu testhaarcuda.cu timehaarcuda.cu tabletimehaar.cu testla8cuda.cu testc6cuda.cu
 CUSRC = utilscuda.cu
 CUWSRC = haarcuda.cu daubcuda4.cu la8cuda.cu c6cuda.cu transformcuda.cu
 CUHEADS = haarcuda.cuh utilscuda.cuh cudaheads.h daub4cuda.cuh threshcuda.cuh la8cuda.cuh wavutilscuda.cuh c6cuda.cuh transformcuda.cuh
@@ -48,27 +42,32 @@ CUOS = utilscuda.o wavutilscuda.o
 CUWOS = haarcuda.o daub4cuda.o la8cuda.o c6cuda.o threshcuda.o
 CUTOS = transformcuda.o
 CULIBS = -l curand
+CUEXES = cutesthaar cutestdaub4 cutimehaar cutimedaub4 cutabhaar cutabdaub4 cutestla8 cutestc6 cutestcvt
 
 
 ## Debug-mode variable.
 
 OSDEB = utilsdebug.o wavutilsdebug.o
 WOSDEB = daub4debug.o haardebug.o la8debug.o c6debug.o threshdebug.o
-TOSBED = transformdebug.o
+TOSDEB = transformdebug.o
+EXESDEB = cptesthaard cptestdaub4d cptestcvtd cptestla8d cptestc6d cptestcvtd cptesttransformd
 
 CUOSDEB = utilscudadebug.o wavutilscudadebug.o
 CUWOSDEB = haarcudadebug.o daub4cudadebug.o la8cudadebug.o c6cudadebug.o threshdebug.o
 CUTOSDEB = transformcudadebug.o
+CUEXESDEB = cutesthaard cutestdaub4d cutimedaub4d cutabhaard cutabdaub4d cutestla8d cutestc6d cutimehaard cutestcvtd
 
 
 .PHONY: all
-all: $(SH_LIB)
+all: $(EXES) $(CUEXES) $(CUEXESDEB) $(EXESDEB)
 
-$(SH_LIB): $(R_FUNCS) $(HEADS) $(CUHEADS) $(OS) $(CUOS) $(WOS) $(CUWOS)  $(TOS) $(CUTOS) rfunctions.o
-	$(CUC) -shared $(CUFLAGS) $(CUOPT) $(OS) $(CUOS) $(WOS) $(CUWOS) $(TOS) $(CUTOS) $(LD_PARAMS) $(LIBS) rfunctions.o -o $@ $(CULIBS)
+perf: $(EXES) $(CUEXES)
 
-rfunctions.o: $(R_FUNCS) $(HEADS) $(CUHEADS) $(OS) $(CUOS) $(WOS) $(CUWOS) $(TOS) $(CUTOS)
-	$(CUC) $(CUFLAGS) $(CUOPT) $(INCS) -c -o $@ $(R_FUNCS) $(CULIBS)
+debug: $(CUEXESDEB) $(EXESDEB)
+
+cuda: $(CUEXES) $(CUEXESDEB)
+
+nocuda: $(EXES) $(EXESDEB)
 
 cutab%: $(CUOS) $(OS) tabletime%.cu %cuda.o %.o
 	$(CUC) $(CUFLAGS) $(CUOPT) -o $@ $^ $(CULIBS)
@@ -174,4 +173,4 @@ wavutilscudadebug.o: wavutilscuda.cu $(CUHEADS)
 
 .PHONY: clean
 clean:
-	rm -f *.o *~ $(PROF) *.so
+	rm -f *.o *~ $(EXES) $(CUEXES) $(PROF) $(EXESDEB) $(CUEXESDEB)
