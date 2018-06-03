@@ -1,8 +1,8 @@
 
-if(!is.loaded("wavecuda"))
-    dyn.load("wavecuda.so")
+## if(!is.loaded("wavecuda"))
+##     dyn.load("../src/wavecuda.so")
 
-
+#' @export
 check.trans.inputs <- function(xin,direction,nlevels,transform.type,filter){
     ttype <- switch(transform.type,"DWT"=0,"MODWT.TO"=1,"MODWT.PO"=2)
     if(is.null(ttype)) stop("Unexpected transform type")
@@ -18,7 +18,7 @@ check.trans.inputs <- function(xin,direction,nlevels,transform.type,filter){
     lenxin <- length(xin) ## could be len or len*2*nlevels
 
     if(!is.numeric(xin)) stop("Unexpected input vector")
-    
+
     if(ttype == 0){
         ## DWT. We only use xin, which we set to x
         x <- xin
@@ -56,6 +56,7 @@ check.trans.inputs <- function(xin,direction,nlevels,transform.type,filter){
     list(x=x,xmod=xmod,len=len,sense=sense,nlevels=nlevels,ttype=ttype,filt=filt,filtlen=filtlen)
 }
 
+#' @export
 check.thresh.inputs <- function(xin,nlevels,transform.type, filter,hard.soft,thresh,min.level,max.level){
     arg.list <- check.trans.inputs(xin,"BWD",nlevels,transform.type,filter)
     ## we're not doing a BWD transform, but just getting the inputs right!
@@ -84,6 +85,7 @@ check.thresh.inputs <- function(xin,nlevels,transform.type, filter,hard.soft,thr
     return(arg.list)
 }
 
+#' @export
 check.smooth.inputs <- function(xin,nlevels,transform.type,filter,thresh.type,thresh,hard.soft,min.level,max.level,tol){
     arg.list <- check.trans.inputs(xin,"FWD",nlevels,transform.type,filter)
 
@@ -125,6 +127,7 @@ check.smooth.inputs <- function(xin,nlevels,transform.type,filter,thresh.type,th
     
 }
 
+#' @export
 return.trans <- function(arglist, argsin){
     ## returning a nice wavelet structure
 
@@ -140,6 +143,7 @@ return.trans <- function(arglist, argsin){
     return(wvt_return)
 }
 
+#' @export
 return.thresh <- function(arglist){
     if(arglist$ttype>0){
         return(arglist$xmod)
@@ -149,6 +153,8 @@ return.thresh <- function(arglist){
     }
 }
 
+#' @useDynLib wavecuda RcpuTransform
+#' @export
 CPUTransform <- function(xin, direction, nlevels, transform.type, filter){
 
     ## add WST object creation...
@@ -172,6 +178,8 @@ CPUTransform <- function(xin, direction, nlevels, transform.type, filter){
     return(return.trans(arg.list, args.in))
 }
 
+#' @useDynLib wavecuda RgpuTransform
+#' @export
 GPUTransform <- function(xin, direction, nlevels, transform.type, filter){
 
     ## add WST object creation...
@@ -194,6 +202,8 @@ GPUTransform <- function(xin, direction, nlevels, transform.type, filter){
     return(return.trans(arg.list, args.in))
 }
 
+#' @useDynLib wavecuda RcpuThreshold
+#' @export
 CPUThreshold <- function(xin,nlevels,transform.type,filter,thresh,hard.soft,min.level,max.level){
     arg.list <- check.thresh.inputs(xin,nlevels,transform.type, filter,hard.soft,thresh,min.level,max.level)
 
@@ -214,6 +224,8 @@ CPUThreshold <- function(xin,nlevels,transform.type,filter,thresh,hard.soft,min.
     return(return.thresh(arg.list))
 }
 
+#' @useDynLib wavecuda RcpuSmooth
+#' @export
 CPUSmooth <- function(xin,nlevels,transform.type,filter,thresh.type,thresh=NULL,hard.soft,min.level,max.level,tol=0.01){
 
     arg.list <- check.smooth.inputs(xin,nlevels,transform.type,filter,thresh.type,thresh,hard.soft,min.level,max.level,tol)
@@ -236,6 +248,8 @@ CPUSmooth <- function(xin,nlevels,transform.type,filter,thresh.type,thresh=NULL,
     return(arg.list$x)
 }
 
+#' @useDynLib wavecuda RgpuSmooth
+#' @export
 GPUSmooth <- function(xin,nlevels,transform.type,filter,thresh.type,thresh=NULL,hard.soft,min.level,max.level,tol=0.01){
 
     arg.list <- check.smooth.inputs(xin,nlevels,transform.type,filter,thresh.type,thresh,hard.soft,min.level,max.level,tol)
@@ -260,6 +274,8 @@ GPUSmooth <- function(xin,nlevels,transform.type,filter,thresh.type,thresh=NULL,
     return(arg.list$x)
 }
 
+#' @useDynLib wavecuda RgpuTransformList
+#' @export
 GPUTransformList <- function(xin, direction, nlevels, transform.type, filter){
     ## xin should be a list
     ## direction, nlevels, transform.type, filter should be vectors
@@ -286,9 +302,8 @@ GPUTransformList <- function(xin, direction, nlevels, transform.type, filter){
     return(ret.list)
     
 }
-    
 
-
+#' @export
 wstCV1 <- function (ndata, ll = 3, type = "soft", filter.number = 10, family = "DaubLeAsymm", 
     tol = 0.01, verbose = 0, plot.it = FALSE, norm = l2norm, 
     InverseType = "average", uvdev = madmad) 
