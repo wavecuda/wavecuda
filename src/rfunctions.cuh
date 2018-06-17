@@ -1,9 +1,8 @@
 #ifndef RFUNC_H
 #define RFUNC_H
 
-#include<R.h>
-#include<Rinternals.h>
-#include <R_ext/Rdynload.h>
+#include <Rcpp.h>
+using namespace Rcpp;
 
 #include "transform.h"
 #include "transformcuda.cuh"

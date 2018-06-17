@@ -1,5 +1,6 @@
 #include "rfunctions.cuh"
 
+//[[Rcpp::export]]
 void RcpuTransform(real* x, real* xmod, int* len, int* sense, int* nlevels, int * ttype, int* filter, int* filterlen){
   int res;
   wst *w;
@@ -17,7 +18,7 @@ void RcpuTransform(real* x, real* xmod, int* len, int* sense, int* nlevels, int 
   if(res!=0) Rprintf("\n Error in CPU transform\n");
 }
 
-
+//[[Rcpp::export]]
 void RgpuTransform(real* x, real* xmod, int* len, int* sense, int* nlevels, int * ttype, int* filter, int* filterlen){
   int res;
   cuwst *w;
@@ -55,7 +56,7 @@ void RgpuTransform(real* x, real* xmod, int* len, int* sense, int* nlevels, int 
   if(res!=0) Rprintf("\n Error in CPU transform\n");
 }
 
-
+//[[Rcpp::export]]
 void RcpuThreshold(real* x, real* xmod, int* len, int* nlevels, int * ttype, int* filter, int* filterlen, real* thresh, int* hardness, int* minlevel, int* maxlevel){
   wst *w;
 
@@ -68,6 +69,7 @@ void RcpuThreshold(real* x, real* xmod, int* len, int* nlevels, int * ttype, int
   remove_wvtstruct(w);
 }
 
+//[[Rcpp::export]]
 void RcpuSmooth(real* x, int* len, int* nlevels, int * ttype, int* filter, int* filterlen, int* threshtype, real* thresh, int* hardness, int* minlevel, int* maxlevel, real* tol){
   wst *w;
 
@@ -99,6 +101,7 @@ void RcpuSmooth(real* x, int* len, int* nlevels, int * ttype, int* filter, int* 
   
 }
 
+//[[Rcpp::export]]
 void RgpuSmooth(real* x, int* len, int* nlevels, int * ttype, int* filter, int* filterlen, int* threshtype, real* thresh, int* hardness, int* minlevel, int* maxlevel, real* tol){
   cuwst *w;
 
@@ -136,6 +139,7 @@ void RgpuSmooth(real* x, int* len, int* nlevels, int * ttype, int* filter, int* 
   
 }
 
+//[[Rcpp::export]]
 SEXP RgpuTransformList(SEXP argslist){
   // expecting a list of lists
   // with each sublist containing x, xmod, len, filt etc
