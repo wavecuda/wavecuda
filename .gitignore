@@ -24,4 +24,4 @@ noisy*csv
 *.txt
 
 ## misc other
-
+.Rhistory
