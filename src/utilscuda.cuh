@@ -19,4 +19,14 @@ __global__ void printmatveccu(real* x_d, uint nrow, uint ncol);
 
 void print_device_vector(real* x_d, uint len);
 
+#if __CUDA_ARCH__ < 600
+__device__ double atomicAddDouble(double* address, double val);
+// from cuda programming guide
+// manual double atomic add as not possible in compute 3/3.5
+
+// we should be able to overload atomicAdd, but for some reason this isn't working
+// so instead we create a new function
+#endif
+
+
 #endif //ifndef

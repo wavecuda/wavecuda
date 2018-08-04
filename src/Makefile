@@ -36,7 +36,7 @@ PROF = gmon.out
 
 ## CUDA variables
 CUC = nvcc
-CUFLAGS = -arch=sm_30 -m 64 -Xcompiler -Wall -Xcompiler -Wextra -Xcompiler -fopenmp -Xcompiler -fpic
+CUFLAGS = --gpu-architecture=compute_30 -m 64 -Xcompiler -Wall -Xcompiler -Wextra -Xcompiler -fopenmp -Xcompiler -fpic
 CUG = -g -G -Xcompiler -g -pg
 CUOPT = -use_fast_math
 CULINK = -dc
@@ -143,10 +143,10 @@ threshdebug.o: thresh.cpp $(OSDEB) $(TOSDEB)
 	$(CC) $(CFLAGS) $(G) -c -o $@ $< $(LIBS)
 
 threshcuda.o: threshcuda.cu $(CUOS) $(CUTOS)
-	$(CUC) $(CUFLAGS) $(CUOPT) -c -o $@ $< $(CULIBS)
+	$(CUC) $(CUFLAGS) $(CUOPT) $(CULINK) -c -o $@ $< $(CULIBS)
 
 threshcudadebug.o: threshcuda.cu $(CUOSDEB) $(CUTOSDEB)
-	$(CUC) $(CUFLAGS) $(CUG) -c -o $@ $< $(CULIBS)
+	$(CUC) $(CUFLAGS) $(CUG) $(CULINK) -c -o $@ $< $(CULIBS)
 
 utils.o: utils.cpp $(HEADS)
 	$(CC) $(CFLAGS) $(OPT) -c -o $@ $< $(LIBS)
