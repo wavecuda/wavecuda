@@ -20,11 +20,6 @@ __device__ real thresh_coef_cuda_hard(const real coef_in, const real thresh);
 
 __device__ real thresh_coef_cuda_soft(const real coef_in, const real thresh);
 
-
-__device__ double atomicAdd(double* address, double val);
-// from cuda programming guide
-// manual double atomic add as not possible in compute 3/3.5
-
 void threshold(cuwst* win, cuwst* wout, real thresh, short hardness, uint minlevel, uint maxlevel, cudaStream_t stream);
 
 real interp_mse(cuwst* wn, cuwst* wye, cuwst* wyo, mtype *m_d, cudaStream_t stream);
@@ -63,6 +58,5 @@ __device__ void sum_reduce_shmem(real* xsh, uint skip, uint len, uint sh_size, u
 // assumes len, skip are powers of 2
 
 real univ_thresh_approx(cuwst *w, uint minlevel, uint maxlevel, cudaStream_t stream);
-
 
 #endif

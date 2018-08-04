@@ -142,10 +142,10 @@ threshdebug.o: thresh.cpp $(OSDEB) $(TOSDEB)
 	$(CC) $(CFLAGS) $(G) -c -o $@ $< $(LIBS)
 
 threshcuda.o: threshcuda.cu $(CUOS) $(CUTOS)
-	$(CUC) $(CUFLAGS) $(CUOPT) -c -o $@ $< $(CULIBS)
+	$(CUC) $(CUFLAGS) $(CUOPT) $(CULINK) -c -o $@ $< $(CULIBS)
 
 threshcudadebug.o: threshcuda.cu $(CUOSDEB) $(CUTOSDEB)
-	$(CUC) $(CUFLAGS) $(CUG) -c -o $@ $< $(CULIBS)
+	$(CUC) $(CUFLAGS) $(CUG) $(CULINK) -c -o $@ $< $(CULIBS)
 
 utils.o: utils.cpp $(HEADS)
 	$(CC) $(CFLAGS) $(OPT) -c -o $@ $< $(LIBS)

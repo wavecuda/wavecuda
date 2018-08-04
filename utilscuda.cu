@@ -96,3 +96,22 @@ void print_device_vector(real* x_d, uint len){
   printvec(tmp,len);
   cudaStreamDestroy(str);
 }
+
+
+#if __CUDA_ARCH__ < 600
+__device__ double atomicAddDouble(double* address, double val) {
+  // from cuda programming guide
+  // manual double atomic add as not possible in compute 3/3.5
+  unsigned long long int* address_as_ull = (unsigned long long int*)address;
+  unsigned long long int old = *address_as_ull, assumed;
+
+  do {
+    assumed = old;
+    old = atomicCAS(address_as_ull, assumed,
+		    __double_as_longlong(val +
+					 __longlong_as_double(assumed)));
+    // Note: uses integer comparison to avoid hang in case of NaN (since NaN !=NaN)
+  } while (assumed != old);
+  return __longlong_as_double(old);
+}
+#endif

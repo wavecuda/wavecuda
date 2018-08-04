@@ -96,23 +96,6 @@ __device__ real thresh_coef_cuda_soft(const real coef_in, const real thresh){
   else return(((coef_in < 0) ? -1 : 1)*(fabs(coef_in) - thresh));
 }
 
-__device__ double atomicAdd(double* address, double val) {
-  // from cuda programming guide
-  // manual double atomic add as not possible in compute 3/3.5
-  unsigned long long int* address_as_ull = (unsigned long long int*)address;
-  unsigned long long int old = *address_as_ull, assumed;
-
-  do {
-    assumed = old;
-    old = atomicCAS(address_as_ull, assumed,
-		    __double_as_longlong(val +
-					 __longlong_as_double(assumed)));
-    // Note: uses integer comparison to avoid hang in case of NaN (since NaN !=NaN)
-  } while (assumed != old);
-  return __longlong_as_double(old);
-}
-
-
 void threshold(cuwst* win, cuwst* wout, real thresh, short hardness, uint minlevel, uint maxlevel, cudaStream_t stream){
   uint len = win->len;
   if(check_len_levels(len,win->levels,minlevel,maxlevel,win->filtlen) > 0){
@@ -269,7 +252,7 @@ __global__ void interp_mse_kernel(real* xn, real* ye, real* yo, uint len, mtype*
     
   if(threadIdx.x==0)
     //atomicAdd(m_global,m_shared);
-    atomicAdd(m_global,(mtype)y_interp[0]);
+    atomicAddDouble(m_global,(mtype)y_interp[0]);
   // atomic add of m_shared to m_global if tid=0
 }
 
@@ -691,9 +674,9 @@ __global__ void sum_n_sqdev_dwt_details(real* x, const uint len, real *sum, cons
 
   if(tid==0){
     if(sqdev)
-      atomicAdd(sum,x_work[0]/(real)(n_det-1));
+      atomicAddDouble(sum,x_work[0]/(real)(n_det-1));
     else
-      atomicAdd(sum,x_work[0]/(real)n_det);
+      atomicAddDouble(sum,x_work[0]/(real)n_det);
     // atomic add of block's sum/n to global sum if tid=0
   }
   
@@ -744,9 +727,9 @@ __global__ void sum_n_sqdev_modwt_details(real* x, const uint len, real *sum, co
 
   if(tid==0){
     if(sqdev)
-      atomicAdd(sum,x_work[0]/(real)(n_det-1));
+      atomicAddDouble(sum,x_work[0]/(real)(n_det-1));
     else
-      atomicAdd(sum,x_work[0]/(real)n_det);
+      atomicAddDouble(sum,x_work[0]/(real)n_det);
     // atomic add of block's sum to global sum if tid=0
   }
 
