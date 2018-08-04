@@ -182,7 +182,7 @@ plotMODWT <- function(Xwav, method = "dp"){
         padl <- rep(1:Xwav$nlevels, each = 2) # levels
         padmm <- rep(1:2, Xwav$nlevels) # minmax
 
-        detailCoeffSelector <- (1:Xwav$len)*
+        ## detailCoeffSelector <- (1:Xwav$len)*
         
         xw_df <- data.table(W = c(Xwav$xmod, padNA),
                             Level = c(makeLevelNVec(Xwav,levelList),padl),

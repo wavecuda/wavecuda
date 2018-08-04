@@ -13,3 +13,4 @@ Depends:
     ggplot2
 License: GPL
 LazyData: true
+RoxygenNote: 6.1.0
