@@ -11,5 +11,9 @@ Depends:
     dplyr,
     tidyr,
     ggplot2
+Encoding: UTF-8
 License: GPL
 LazyData: true
+Imports: Rcpp (>= 0.12.14)
+LinkingTo: Rcpp
+RoxygenNote: 6.1.0

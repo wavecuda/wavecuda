@@ -6,172 +6,180 @@ include config.mk
 
 # File with functions calling everything
 
-R_FUNCS = rfunctions.cu
+R_FUNCS = rfunctions.cpp
 
 ## Our shared library file
 SH_LIB = wavecuda.so
 
-INCS := -I. -I"$(CUDA_INC)" -I"$(R_INC)"
-LD_PARAMS := $(DEVICEOPTS) -Xlinker '$(RPATH) $(R_FRAMEWORK)'
-LIBS :=  -L"$(R_LIB)" -L"$(CUDA_LIB)"
+WAVEC_INCS = -I. -I"$(CUDA_INC)" -I"$(R_INC)" -I"$(RCPP_INC)"
+LD_PARAMS = $(DEVICEOPTS) -Xlinker '$(RPATH) $(R_FRAMEWORK)'
+LIBS =  -L"$(R_LIB)" -L"$(CUDA_LIB)"
+PKG_LIBS= -L$(CUDA_HOME)/lib64 -Wl,-rpath,$(CUDA_HOME)/lib64 -lcuda -lcudart -d
 
 
 SHELL = /bin/sh
 
 ## CPP variables
-CXX = gcc
-CFLAGS = -Wall -Wextra -fopenmp -fpic ## fpic required for R shared library
-G = -g3 -pg
-OPT = -O3 -ffast-math
+WAVEC_CXX = g++
+WAVEC_CFLAGS = -fopenmp -fPIC $(WAVEC_INCS) ## fpic required for R shared library
+WAVEC_G = -g3 -pg
+WAVEC_OPT = -O3 -ffast-math
 
-SRC = utils.cpp wavutils.cpp
-WSRC = haar.cpp daub4.cpp la8.cpp c6.cpp transform.cpp
-HEADS = utils.h wvtheads.h wavutils.h transform.h
-OS = utils.o wavutils.o
-WOS = daub4.o haar.o la8.o c6.o thresh.o
-TOS = transform.o
-LIBS = -lm -lstdc++ -lcudart #for cuda runtime API linkage
-PROF = gmon.out
+WAVEC_SRC = utils.cpp wavutils.cpp
+WAVEC_WSRC = haar.cpp daub4.cpp la8.cpp c6.cpp transform.cpp
+WAVEC_HEADS = utils.h wvtheads.h wavutils.h transform.h
+WAVEC_OS = utils.o wavutils.o
+WAVEC_WOS = daub4.o haar.o la8.o c6.o thresh.o
+WAVEC_TOS = transform.o
+#LIBS = -lm -lstdc++ -lcudart #for cuda runtime API linkage
+WAVEC_PROF = gmon.out
+
+
+PKG_CXXFLAGS += -fopenmp -fPIC
+PKG_CPPFLAGS += $(WAVEC_INCS)
 
 
 ## CUDA variables
-CUC = nvcc
-CUFLAGS = -arch=sm_30 -m 64 -Xcompiler -Wall -Xcompiler -Wextra -Xcompiler -fopenmp -Xcompiler -fpic
-CUG = -g -G -Xcompiler -g -pg
-CUOPT = -use_fast_math
-CULINK = -dc
+WAVEC_CUC = nvcc
+WAVEC_CUFLAGS = -arch=sm_30 -m 64 -Xcompiler -fopenmp -Xcompiler "-fPIC" $(WAVEC_INCS)
+WAVEC_CUG = -g -G -Xcompiler -g -pg
+WAVEC_CUOPT = -use_fast_math
+WAVEC_CULINK = -dc
 
-CUSRC = utilscuda.cu
-CUWSRC = haarcuda.cu daubcuda4.cu la8cuda.cu c6cuda.cu transformcuda.cu
-CUHEADS = haarcuda.cuh utilscuda.cuh cudaheads.h daub4cuda.cuh threshcuda.cuh la8cuda.cuh wavutilscuda.cuh c6cuda.cuh transformcuda.cuh
-CUOS = utilscuda.o wavutilscuda.o
-CUWOS = haarcuda.o daub4cuda.o la8cuda.o c6cuda.o threshcuda.o
-CUTOS = transformcuda.o
-CULIBS = -l curand
+WAVEC_CUSRC = utilscuda.cu
+WAVEC_CUWSRC = haarcuda.cu daubcuda4.cu la8cuda.cu c6cuda.cu transformcuda.cu
+WAVEC_CUHEADS = haarcuda.cuh utilscuda.cuh cudaheads.h daub4cuda.cuh threshcuda.cuh la8cuda.cuh wavutilscuda.cuh c6cuda.cuh transformcuda.cuh
+WAVEC_CUOS = utilscuda.o wavutilscuda.o
+WAVEC_CUWOS = haarcuda.o daub4cuda.o la8cuda.o c6cuda.o threshcuda.o
+WAVEC_CUTOS = transformcuda.o
+WAVEC_CULIBS = -l curand
 
 
 ## Debug-mode variable.
 
-OSDEB = utilsdebug.o wavutilsdebug.o
-WOSDEB = daub4debug.o haardebug.o la8debug.o c6debug.o threshdebug.o
-TOSBED = transformdebug.o
+WAVEC_OSDEB = utilsdebug.o wavutilsdebug.o
+WAVEC_WOSDEB = daub4debug.o haardebug.o la8debug.o c6debug.o threshdebug.o
+WAVEC_TOSBED = transformdebug.o
 
-CUOSDEB = utilscudadebug.o wavutilscudadebug.o
-CUWOSDEB = haarcudadebug.o daub4cudadebug.o la8cudadebug.o c6cudadebug.o threshdebug.o
-CUTOSDEB = transformcudadebug.o
+WAVEC_CUOSDEB = utilscudadebug.o wavutilscudadebug.o
+WAVEC_CUWOSDEB = haarcudadebug.o daub4cudadebug.o la8cudadebug.o c6cudadebug.o threshdebug.o
+WAVEC_CUTOSDEB = transformcudadebug.o
 
 
-.PHONY: all
+.PHONY: all wc_code
 all: $(SH_LIB)
 
-$(SH_LIB): $(R_FUNCS) $(HEADS) $(CUHEADS) $(OS) $(CUOS) $(WOS) $(CUWOS)  $(TOS) $(CUTOS) rfunctions.o
-	$(CUC) -shared $(CUFLAGS) $(CUOPT) $(OS) $(CUOS) $(WOS) $(CUWOS) $(TOS) $(CUTOS) $(LD_PARAMS) $(LIBS) rfunctions.o -o $@ $(CULIBS)
 
-rfunctions.o: $(R_FUNCS) $(HEADS) $(CUHEADS) $(OS) $(CUOS) $(WOS) $(CUWOS) $(TOS) $(CUTOS)
-	$(CUC) $(CUFLAGS) $(CUOPT) $(INCS) -c -o $@ $(R_FUNCS) $(CULIBS)
+$(SH_LIB): wc_code
 
-cutab%: $(CUOS) $(OS) tabletime%.cu %cuda.o %.o
-	$(CUC) $(CUFLAGS) $(CUOPT) -o $@ $^ $(CULIBS)
+wc_code: $(R_FUNCS) $(WAVEC_HEADS) $(WAVEC_CUHEADS) $(WAVEC_OS) $(WAVEC_CUOS) $(WAVEC_WOS) $(WAVEC_CUWOS) $(WAVEC_TOS) $(WAVEC_CUTOS) rfunctions.o
+##	$(WAVEC_CUC) -shared $(WAVEC_CUFLAGS) $(WAVEC_CUOPT) $(WAVEC_OS) $(WAVEC_CUOS) $(WAVEC_WOS) $(WAVEC_CUWOS) $(WAVEC_TOS) $(WAVEC_CUTOS) $(WAVEC_LD_PARAMS) $(WAVEC_LIBS) rfunctions.o -o $@ $(WAVEC_CULIBS)
 
-cutab%d: $(CUOSDEB) $(OSDEB) tabletime%.cu %cudadebug.o %debug.o
-	$(CUC) $(CUFLAGS) $(CUG) -o $@ $^ $(CULIBS)
+rfunctions.o: $(R_FUNCS) $(WAVEC_HEADS) $(WAVEC_CUHEADS) $(WAVEC_OS) $(WAVEC_CUOS) $(WAVEC_WOS) $(WAVEC_CUWOS) $(WAVEC_TOS) $(WAVEC_CUTOS)
+	$(WAVEC_CUC) $(WAVEC_CUFLAGS) $(WAVEC_CUOPT) $(WAVEC_INCS) $(WAVEC_LD_PARAMS) $(WAVEC_LIBS) -c -o $@ $(R_FUNCS) $(WAVEC_CULIBS)
 
-cutime%: $(CUOS) $(OS) time%cuda.cu %cuda.o %.o
-	$(CUC) $(CUFLAGS) $(CUOPT) -o $@ $^ $(CULIBS)
+cutab%: $(WAVEC_CUOS) $(WAVEC_OS) tabletime%.cu %cuda.o %.o
+	$(WAVEC_CUC) $(WAVEC_CUFLAGS) $(WAVEC_CUOPT) -o $@ $^ $(WAVEC_CULIBS)
 
-cutime%d: $(CUOSDEB) $(OSDEB) time%cuda.cu %cudadebug.o %debug.o
-	$(CUC) $(CUFLAGS) $(CUG) -o $@ $^ $(CULIBS)
+cutab%d: $(WAVEC_CUOSDEB) $(WAVEC_OSDEB) tabletime%.cu %cudadebug.o %debug.o
+	$(WAVEC_CUC) $(WAVEC_CUFLAGS) $(WAVEC_CUG) -o $@ $^ $(WAVEC_CULIBS)
 
-cutest%: $(CUOS) $(OS) %cuda.o %.o test%cuda.cu 
-	$(CUC) $(CUFLAGS) $(CUOPT) -o $@ $^ $(CULIBS)
+cutime%: $(WAVEC_CUOS) $(WAVEC_OS) time%cuda.cu %cuda.o %.o
+	$(WAVEC_CUC) $(WAVEC_CUFLAGS) $(WAVEC_CUOPT) -o $@ $^ $(WAVEC_CULIBS)
 
-cutest%d: $(CUOSDEB) $(OSDEB) %cudadebug.o %debug.o test%cuda.cu
-	$(CUC) $(CUFLAGS) $(CUG) -o $@ $^ $(CULIBS)
+cutime%d: $(WAVEC_CUOSDEB) $(WAVEC_OSDEB) time%cuda.cu %cudadebug.o %debug.o
+	$(WAVEC_CUC) $(WAVEC_CUFLAGS) $(WAVEC_CUG) -o $@ $^ $(WAVEC_CULIBS)
 
-cptest%: $(OS) %.o test%.cpp
-	$(CXX) $(CFLAGS) $(OPT) -o $@ $^ $(LIBS)
+cutest%: $(WAVEC_CUOS) $(WAVEC_OS) %cuda.o %.o test%cuda.cu 
+	$(WAVEC_CUC) $(WAVEC_CUFLAGS) $(WAVEC_CUOPT) -o $@ $^ $(WAVEC_CULIBS)
 
-cptest%d: $(OSDEB) %debug.o test%.cpp
-	$(CXX) $(CFLAGS) $(G) -o $@ $^ $(LIBS)
+cutest%d: $(WAVEC_CUOSDEB) $(WAVEC_OSDEB) %cudadebug.o %debug.o test%cuda.cu
+	$(WAVEC_CUC) $(WAVEC_CUFLAGS) $(WAVEC_CUG) -o $@ $^ $(WAVEC_CULIBS)
 
-cutestcvt: testcvtcuda.cu thresh.o threshcuda.o $(CUOS) $(CUWOS) $(OS) $(WOS) $(TOS) $(CUTOS)
-	$(CUC) $(CUFLAGS) $(CUOPT) -o $@ $^ $(CULIBS)
+cptest%: $(WAVEC_OS) %.o test%.cpp
+	$(WAVEC_CXX) $(WAVEC_CFLAGS) $(WAVEC_OPT) -o $@ $^ $(WAVEC_LIBS)
 
-cutestcvtd: testcvtcuda.cu threshdebug.o threshcudadebug.o $(CUOSDEB) $(CUWOSDEB) $(OSDEB) $(WOSDEB) $(TOSDEB) $(CUTOSDEB)
-	$(CUC) $(CUFLAGS) $(CUG) -o $@ $^ $(CULIBS)
+cptest%d: $(WAVEC_OSDEB) %debug.o test%.cpp
+	$(WAVEC_CXX) $(WAVEC_CFLAGS) $(WAVEC_G) -o $@ $^ $(WAVEC_LIBS)
 
-cptestcvt: testcvt.cpp thresh.o $(OS) $(WOS) $(TOS)
-	$(CXX) $(CFLAGS) $(OPT) -o $@ $^ $(LIBS)
+cutestcvt: testcvtcuda.cu thresh.o threshcuda.o $(WAVEC_CUOS) $(WAVEC_CUWOS) $(WAVEC_OS) $(WAVEC_WOS) $(WAVEC_TOS) $(WAVEC_CUTOS)
+	$(WAVEC_CUC) $(WAVEC_CUFLAGS) $(WAVEC_CUOPT) -o $@ $^ $(WAVEC_CULIBS)
 
-cptestcvtd: testcvt.cpp threshdebug.o $(OSDEB) $(WOSDEB) $(TOSDEB)
-	$(CXX) $(CFLAGS) $(G) -o $@ $^ $(LIBS)
+cutestcvtd: testcvtcuda.cu threshdebug.o threshcudadebug.o $(WAVEC_CUOSDEB) $(WAVEC_CUWOSDEB) $(WAVEC_OSDEB) $(WAVEC_WOSDEB) $(WAVEC_TOSDEB) $(WAVEC_CUTOSDEB)
+	$(WAVEC_CUC) $(WAVEC_CUFLAGS) $(WAVEC_CUG) -o $@ $^ $(WAVEC_CULIBS)
 
-cptesttransform: testtransform.cpp $(OS) $(WOS) $(TOS)
-	$(CXX) $(CFLAGS) $(OPT) -o $@ $^ $(LIBS)
+cptestcvt: testcvt.cpp thresh.o $(WAVEC_OS) $(WAVEC_WOS) $(WAVEC_TOS)
+	$(WAVEC_CXX) $(WAVEC_CFLAGS) $(WAVEC_OPT) -o $@ $^ $(WAVEC_LIBS)
 
-cptesttransformd: testtransform.cpp $(OSDEB) $(WOSDEB) $(TOSDEB)
-	$(CXX) $(CFLAGS) $(G) -o $@ $^ $(LIBS)
+cptestcvtd: testcvt.cpp threshdebug.o $(WAVEC_OSDEB) $(WAVEC_WOSDEB) $(WAVEC_TOSDEB)
+	$(WAVEC_CXX) $(WAVEC_CFLAGS) $(WAVEC_G) -o $@ $^ $(WAVEC_LIBS)
 
-%cuda.o: %cuda.cu $(CUOS) %coeffs.h %cuda.cuh
-	$(CUC) $(CUFLAGS) $(CUOPT) $(CULINK) -c -o $@ $< $(CULIBS)
+cptesttransform: testtransform.cpp $(WAVEC_OS) $(WAVEC_WOS) $(WAVEC_TOS)
+	$(WAVEC_CXX) $(WAVEC_CFLAGS) $(WAVEC_OPT) -o $@ $^ $(WAVEC_LIBS)
 
-%cudadebug.o: %cuda.cu $(CUOSDEB) %coeffs.h %cuda.cuh
-	$(CUC) $(CUFLAGS) $(CUG) $(CULINK) -c -o $@ $< $(CULIBS)
+cptesttransformd: testtransform.cpp $(WAVEC_OSDEB) $(WAVEC_WOSDEB) $(WAVEC_TOSDEB)
+	$(WAVEC_CXX) $(WAVEC_CFLAGS) $(WAVEC_G) -o $@ $^ $(WAVEC_LIBS)
 
-%.o: %.cpp %.h %coeffs.h $(OS)
-	$(CXX) $(CFLAGS) $(OPT) -c -o $@ $< $(LIBS)
+%cuda.o: %cuda.cu $(WAVEC_CUOS) %coeffs.h %cuda.cuh
+	$(WAVEC_CUC) $(WAVEC_CUFLAGS) $(WAVEC_CUOPT) $(WAVEC_CULINK) -c -o $@ $< $(WAVEC_CULIBS)
 
-%debug.o: %.cpp %.h %coeffs.h $(OSDEB)
-	$(CXX) $(CFLAGS) $(G) -c -o $@ $< $(LIBS)
+%cudadebug.o: %cuda.cu $(WAVEC_CUOSDEB) %coeffs.h %cuda.cuh
+	$(WAVEC_CUC) $(WAVEC_CUFLAGS) $(WAVEC_CUG) $(WAVEC_CULINK) -c -o $@ $< $(WAVEC_CULIBS)
 
-transform.o: transform.cpp $(OS) $(filter-out thresh.o,$(WOS))
-	$(CXX) $(CFLAGS) $(OPT) -c -o $@ $< $(LIBS)
+%.o: %.cpp %.h %coeffs.h $(WAVEC_OS)
+	$(WAVEC_CXX) $(WAVEC_CFLAGS) $(WAVEC_OPT) -c -o $@ $< $(WAVEC_LIBS)
 
-transformdebug.o: transform.cpp $(OSDEB) $(filter-out threshdebug.o,$(WOSDEB))
-	$(CXX) $(CFLAGS) $(G) -c -o $@ $< $(LIBS)
+%debug.o: %.cpp %.h %coeffs.h $(WAVEC_OSDEB)
+	$(WAVEC_CXX) $(WAVEC_CFLAGS) $(WAVEC_G) -c -o $@ $< $(WAVEC_LIBS)
 
-transformcuda.o: transformcuda.cu $(CUOS) $(filter-out threshcuda.o,$(CUWOS))
-	$(CUC) $(CUFLAGS) $(CUOPT) -c -o $@ $< $(LIBS)
+transform.o: transform.cpp $(WAVEC_OS) $(WAVEC_filter-out thresh.o,$(WAVEC_WOS))
+	$(WAVEC_CXX) $(WAVEC_CFLAGS) $(WAVEC_OPT) -c -o $@ $< $(WAVEC_LIBS)
 
-transformcudadebug.o: transformcuda.cu $(CUOSDEB) $(filter-out threshcudadebug.o,$(CUWOSDEB))
-	$(CUC) $(CUFLAGS) $(CUG) -c -o $@ $< $(LIBS)
+transformdebug.o: transform.cpp $(WAVEC_OSDEB) $(WAVEC_filter-out threshdebug.o,$(WAVEC_WOSDEB))
+	$(WAVEC_CXX) $(WAVEC_CFLAGS) $(WAVEC_G) -c -o $@ $< $(WAVEC_LIBS)
 
-thresh.o: thresh.cpp $(OS) $(TOS)
-	$(CXX) $(CFLAGS) $(OPT) -c -o $@ $< $(LIBS)
+transformcuda.o: transformcuda.cu $(WAVEC_CUOS) $(WAVEC_filter-out threshcuda.o,$(WAVEC_CUWOS))
+	$(WAVEC_CUC) $(WAVEC_CUFLAGS) $(WAVEC_CUOPT) -c -o $@ $< $(WAVEC_LIBS)
 
-threshdebug.o: thresh.cpp $(OSDEB) $(TOSDEB)
-	$(CXX) $(CFLAGS) $(G) -c -o $@ $< $(LIBS)
+transformcudadebug.o: transformcuda.cu $(WAVEC_CUOSDEB) $(WAVEC_filter-out threshcudadebug.o,$(WAVEC_CUWOSDEB))
+	$(WAVEC_CUC) $(WAVEC_CUFLAGS) $(WAVEC_CUG) -c -o $@ $< $(WAVEC_LIBS)
 
-threshcuda.o: threshcuda.cu $(CUOS) $(CUTOS)
-	$(CUC) $(CUFLAGS) $(CUOPT) -c -o $@ $< $(CULIBS)
+thresh.o: thresh.cpp $(WAVEC_OS) $(WAVEC_TOS)
+	$(WAVEC_CXX) $(WAVEC_CFLAGS) $(WAVEC_OPT) -c -o $@ $< $(WAVEC_LIBS)
 
-threshcudadebug.o: threshcuda.cu $(CUOSDEB) $(CUTOSDEB)
-	$(CUC) $(CUFLAGS) $(CUG) -c -o $@ $< $(CULIBS)
+threshdebug.o: thresh.cpp $(WAVEC_OSDEB) $(WAVEC_TOSDEB)
+	$(WAVEC_CXX) $(WAVEC_CFLAGS) $(WAVEC_CULINK) $(WAVEC_G) -c -o $@ $< $(WAVEC_LIBS)
 
-utils.o: utils.cpp $(HEADS)
-	$(CXX) $(CFLAGS) $(OPT) -c -o $@ $< $(LIBS)
+threshcuda.o: threshcuda.cu $(WAVEC_CUOS) $(WAVEC_CUTOS)
+	$(WAVEC_CUC) $(WAVEC_CUFLAGS) $(WAVEC_CUOPT) $(WAVEC_CULINK) -c -o $@ $< $(WAVEC_CULIBS)
 
-utilsdebug.o: utils.cpp $(HEADS)
-	$(CXX) $(CFLAGS) $(G) -c -o $@ $< $(LIBS)
+threshcudadebug.o: threshcuda.cu $(WAVEC_CUOSDEB) $(WAVEC_CUTOSDEB)
+	$(WAVEC_CUC) $(WAVEC_CUFLAGS) $(WAVEC_CUG) -c -o $@ $< $(WAVEC_CULIBS)
 
-utilscuda.o: utilscuda.cu $(HEADS) $(CUHEADS)
-	$(CUC) $(CUFLAGS) $(CUOPT) $(CULINK) -c -o $@ $< $(CULIBS)
+utils.o: utils.cpp $(WAVEC_HEADS)
+	$(WAVEC_CXX) $(WAVEC_CFLAGS) $(WAVEC_OPT) -c -o $@ $< $(WAVEC_LIBS)
 
-utilscudadebug.o: utilscuda.cu $(HEADS) $(CUHEADS)
-	$(CUC) $(CUFLAGS) $(CUG) $(CULINK) -c -o $@ $< $(CULIBS)
+utilsdebug.o: utils.cpp $(WAVEC_HEADS)
+	$(WAVEC_CXX) $(WAVEC_CFLAGS) $(WAVEC_G) -c -o $@ $< $(WAVEC_LIBS)
 
-wavutils.o: wavutils.cpp $(HEADS)
-	$(CXX) $(CFLAGS) $(OPT) -c -o $@ $< $(LIBS)
+utilscuda.o: utilscuda.cu $(WAVEC_HEADS) $(WAVEC_CUHEADS)
+	$(WAVEC_CUC) $(WAVEC_CUFLAGS) $(WAVEC_CUOPT) $(WAVEC_CULINK) -c -o $@ $< $(WAVEC_CULIBS)
 
-wavutilsdebug.o: wavutils.cpp $(HEADS)
-	$(CXX) $(CFLAGS) $(G) -c -o $@ $< $(LIBS)
+utilscudadebug.o: utilscuda.cu $(WAVEC_HEADS) $(WAVEC_CUHEADS)
+	$(WAVEC_CUC) $(WAVEC_CUFLAGS) $(WAVEC_CUG) $(WAVEC_CULINK) -c -o $@ $< $(WAVEC_CULIBS)
+
+wavutils.o: wavutils.cpp $(WAVEC_HEADS)
+	$(WAVEC_CXX) $(WAVEC_CFLAGS) $(WAVEC_OPT) -c -o $@ $< $(WAVEC_LIBS)
+
+wavutilsdebug.o: wavutils.cpp $(WAVEC_HEADS)
+	$(WAVEC_CXX) $(WAVEC_CFLAGS) $(WAVEC_G) -c -o $@ $< $(WAVEC_LIBS)
 
 wavutilscuda.o: wavutilscuda.cu cudaheads.h
-	$(CUC) $(CUFLAGS) $(CUOPT) $(CULINK) -c -o $@ $< $(CULIBS)
+	$(WAVEC_CUC) $(WAVEC_CUFLAGS) $(WAVEC_CUOPT) $(WAVEC_CULINK) -c -o $@ $< $(WAVEC_CULIBS)
 
-wavutilscudadebug.o: wavutilscuda.cu $(CUHEADS)
-	$(CUC) $(CUFLAGS) $(CUG) $(CULINK) -c -o $@ $< $(CULIBS)
+wavutilscudadebug.o: wavutilscuda.cu $(WAVEC_CUHEADS)
+	$(WAVEC_CUC) $(WAVEC_CUFLAGS) $(WAVEC_CUG) $(WAVEC_CULINK) -c -o $@ $< $(WAVEC_CULIBS)
 
 .PHONY: clean
 clean:
-	rm -f *.o *~ $(PROF) *.so
+	rm -f *.o *~ $(WAVEC_PROF) *.so

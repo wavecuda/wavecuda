@@ -1,7 +1,4 @@
 
-## if(!is.loaded("wavecuda"))
-##     dyn.load("../src/wavecuda.so")
-
 #' @export
 check.trans.inputs <- function(xin,direction,nlevels,transform.type,filter){
     ttype <- switch(transform.type,"DWT"=0,"MODWT.TO"=1,"MODWT.PO"=2)
@@ -128,18 +125,30 @@ check.smooth.inputs <- function(xin,nlevels,transform.type,filter,thresh.type,th
 }
 
 #' @export
-return.trans <- function(arglist, argsin){
+return.trans <- function(arglist, argsin, returnvec){
     ## returning a nice wavelet structure
 
-    wvt_return <- structure(list("x" = arglist$x,
-                                 "ttype" = argsin$ttype,
-                                 "filt" = argsin$filter,
-                                 "filtlen" = arglist$filterlen,
-                                 "nlevels" = arglist$nlevels,
-                                 "len" = arglist$len,
-                                 "xmod" = arglist$xmod),
-                            class = "WST")
-    
+    if((arglist$ttype > 0) & (arglist$sense == 1)){
+        ## if FWD transform and MODWT
+        wvt_return <- structure(list("x" = arglist$x,
+                                     "ttype" = argsin$ttype,
+                                     "filt" = argsin$filter,
+                                     "filtlen" = arglist$filterlen,
+                                     "nlevels" = arglist$nlevels,
+                                     "len" = arglist$len,
+                                     "xmod" = returnvec),
+                                class = "WST")
+    }else{
+        wvt_return <- structure(list("x" = returnvec,
+                                     "ttype" = argsin$ttype,
+                                     "filt" = argsin$filter,
+                                     "filtlen" = arglist$filterlen,
+                                     "nlevels" = arglist$nlevels,
+                                     "len" = arglist$len,
+                                     "xmod" = arglist$xmod),
+                                class = "WST")
+    }
+        
     return(wvt_return)
 }
 
@@ -153,7 +162,6 @@ return.thresh <- function(arglist){
     }
 }
 
-#' @useDynLib wavecuda RcpuTransform
 #' @export
 CPUTransform <- function(xin, direction, nlevels, transform.type, filter){
 
@@ -164,144 +172,144 @@ CPUTransform <- function(xin, direction, nlevels, transform.type, filter){
     
     arg.list <- check.trans.inputs(xin, direction, nlevels, transform.type, filter)
     
-    arg.list <- .C("RcpuTransform",
-                   x=arg.list$x,
-                   xmod=arg.list$xmod,
-                   len=as.integer(arg.list$len),
-                   sense=as.integer(arg.list$sense),
-                   nlevels=as.integer(arg.list$nlevels),
-                   ttype=as.integer(arg.list$ttype),
-                   filter=as.integer(arg.list$filt),
-                   filterlen=as.integer(arg.list$filtlen),
-                   PACKAGE="wavecuda")
+    return.vec <- RcpuTransform(
+        x=arg.list$x,
+        xmod=arg.list$xmod,
+        len=as.integer(arg.list$len),
+        sense=as.integer(arg.list$sense),
+        nlevels=as.integer(arg.list$nlevels),
+        ttype=as.integer(arg.list$ttype),
+        filter=as.integer(arg.list$filt),
+        filterlen=as.integer(arg.list$filtlen)
+    )
     
-    return(return.trans(arg.list, args.in))
+    return(return.trans(arg.list, args.in, return.vec))
 }
 
-#' @useDynLib wavecuda RgpuTransform
-#' @export
-GPUTransform <- function(xin, direction, nlevels, transform.type, filter){
+## #' @useDynLib wavecuda RgpuTransform
+## #' @export
+## GPUTransform <- function(xin, direction, nlevels, transform.type, filter){
 
-    ## add WST object creation...
-    args.in <- list(ttype=transform.type,
-                    filter=filter)
+##     ## add WST object creation...
+##     args.in <- list(ttype=transform.type,
+##                     filter=filter)
     
-    arg.list <- check.trans.inputs(xin, direction, nlevels, transform.type, filter)
+##     arg.list <- check.trans.inputs(xin, direction, nlevels, transform.type, filter)
     
-    arg.list <- .C("RgpuTransform",
-                   x=arg.list$x,
-                   xmod=arg.list$xmod,
-                   len=as.integer(arg.list$len),
-                   sense=as.integer(arg.list$sense),
-                   nlevels=as.integer(arg.list$nlevels),
-                   ttype=as.integer(arg.list$ttype),
-                   filter=as.integer(arg.list$filt),
-                   filterlen=as.integer(arg.list$filtlen),
-                   PACKAGE="wavecuda")
+##     arg.list <- .C("RgpuTransform",
+##                    x=arg.list$x,
+##                    xmod=arg.list$xmod,
+##                    len=as.integer(arg.list$len),
+##                    sense=as.integer(arg.list$sense),
+##                    nlevels=as.integer(arg.list$nlevels),
+##                    ttype=as.integer(arg.list$ttype),
+##                    filter=as.integer(arg.list$filt),
+##                    filterlen=as.integer(arg.list$filtlen),
+##                    PACKAGE="wavecuda")
     
-    return(return.trans(arg.list, args.in))
-}
+##     return(return.trans(arg.list, args.in))
+## }
 
-#' @useDynLib wavecuda RcpuThreshold
-#' @export
-CPUThreshold <- function(xin,nlevels,transform.type,filter,thresh,hard.soft,min.level,max.level){
-    arg.list <- check.thresh.inputs(xin,nlevels,transform.type, filter,hard.soft,thresh,min.level,max.level)
+## #' @useDynLib wavecuda RcpuThreshold
+## #' @export
+## CPUThreshold <- function(xin,nlevels,transform.type,filter,thresh,hard.soft,min.level,max.level){
+##     arg.list <- check.thresh.inputs(xin,nlevels,transform.type, filter,hard.soft,thresh,min.level,max.level)
 
-    arg.list <- .C("RcpuThreshold",
-                   x=arg.list$x,
-                   xmod=arg.list$xmod,
-                   len=as.integer(arg.list$len),
-                   nlevels=as.integer(arg.list$nlevels),
-                   ttype=as.integer(arg.list$ttype),
-                   filter=as.integer(arg.list$filt),
-                   filterlen=as.integer(arg.list$filtlen),
-                   thresh=arg.list$thresh,
-                   hardness=as.integer(arg.list$hardness),
-                   minlevel=as.integer(arg.list$min.level),
-                   maxlevel=as.integer(arg.list$max.level),
-                   PACKAGE="wavecuda")
+##     arg.list <- .C("RcpuThreshold",
+##                    x=arg.list$x,
+##                    xmod=arg.list$xmod,
+##                    len=as.integer(arg.list$len),
+##                    nlevels=as.integer(arg.list$nlevels),
+##                    ttype=as.integer(arg.list$ttype),
+##                    filter=as.integer(arg.list$filt),
+##                    filterlen=as.integer(arg.list$filtlen),
+##                    thresh=arg.list$thresh,
+##                    hardness=as.integer(arg.list$hardness),
+##                    minlevel=as.integer(arg.list$min.level),
+##                    maxlevel=as.integer(arg.list$max.level),
+##                    PACKAGE="wavecuda")
 
-    return(return.thresh(arg.list))
-}
+##     return(return.thresh(arg.list))
+## }
 
-#' @useDynLib wavecuda RcpuSmooth
-#' @export
-CPUSmooth <- function(xin,nlevels,transform.type,filter,thresh.type,thresh=NULL,hard.soft,min.level,max.level,tol=0.01){
+## #' @useDynLib wavecuda RcpuSmooth
+## #' @export
+## CPUSmooth <- function(xin,nlevels,transform.type,filter,thresh.type,thresh=NULL,hard.soft,min.level,max.level,tol=0.01){
 
-    arg.list <- check.smooth.inputs(xin,nlevels,transform.type,filter,thresh.type,thresh,hard.soft,min.level,max.level,tol)
+##     arg.list <- check.smooth.inputs(xin,nlevels,transform.type,filter,thresh.type,thresh,hard.soft,min.level,max.level,tol)
     
-    arg.list <- .C("RcpuSmooth",
-                   x=arg.list$x,
-                   len=as.integer(arg.list$len),
-                   nlevels=as.integer(arg.list$nlevels),
-                   ttype=as.integer(arg.list$ttype),
-                   filter=as.integer(arg.list$filt),
-                   filterlen=as.integer(arg.list$filtlen),
-                   threshtype=as.integer(arg.list$threshtype),
-                   thresh=arg.list$thresh,
-                   hardness=as.integer(arg.list$hardness),
-                   minlevel=as.integer(arg.list$min.level),
-                   maxlevel=as.integer(arg.list$max.level),
-                   tol=arg.list$tol,
-                   PACKAGE="wavecuda")
+##     arg.list <- .C("RcpuSmooth",
+##                    x=arg.list$x,
+##                    len=as.integer(arg.list$len),
+##                    nlevels=as.integer(arg.list$nlevels),
+##                    ttype=as.integer(arg.list$ttype),
+##                    filter=as.integer(arg.list$filt),
+##                    filterlen=as.integer(arg.list$filtlen),
+##                    threshtype=as.integer(arg.list$threshtype),
+##                    thresh=arg.list$thresh,
+##                    hardness=as.integer(arg.list$hardness),
+##                    minlevel=as.integer(arg.list$min.level),
+##                    maxlevel=as.integer(arg.list$max.level),
+##                    tol=arg.list$tol,
+##                    PACKAGE="wavecuda")
 
-    return(arg.list$x)
-}
+##     return(arg.list$x)
+## }
 
-#' @useDynLib wavecuda RgpuSmooth
-#' @export
-GPUSmooth <- function(xin,nlevels,transform.type,filter,thresh.type,thresh=NULL,hard.soft,min.level,max.level,tol=0.01){
+## #' @useDynLib wavecuda RgpuSmooth
+## #' @export
+## GPUSmooth <- function(xin,nlevels,transform.type,filter,thresh.type,thresh=NULL,hard.soft,min.level,max.level,tol=0.01){
 
-    arg.list <- check.smooth.inputs(xin,nlevels,transform.type,filter,thresh.type,thresh,hard.soft,min.level,max.level,tol)
+##     arg.list <- check.smooth.inputs(xin,nlevels,transform.type,filter,thresh.type,thresh,hard.soft,min.level,max.level,tol)
 
-    if(thresh.type=="univ") stop("Universal threshold not [yet] implemented on GPU, as it's probably quicker on CPU")
+##     if(thresh.type=="univ") stop("Universal threshold not [yet] implemented on GPU, as it's probably quicker on CPU")
     
-    arg.list <- .C("RgpuSmooth",
-                   x=arg.list$x,
-                   len=as.integer(arg.list$len),
-                   nlevels=as.integer(arg.list$nlevels),
-                   ttype=as.integer(arg.list$ttype),
-                   filter=as.integer(arg.list$filt),
-                   filterlen=as.integer(arg.list$filtlen),
-                   threshtype=as.integer(arg.list$threshtype),
-                   thresh=arg.list$thresh,
-                   hardness=as.integer(arg.list$hardness),
-                   minlevel=as.integer(arg.list$min.level),
-                   maxlevel=as.integer(arg.list$max.level),
-                   tol=arg.list$tol,
-                   PACKAGE="wavecuda")
+##     arg.list <- .C("RgpuSmooth",
+##                    x=arg.list$x,
+##                    len=as.integer(arg.list$len),
+##                    nlevels=as.integer(arg.list$nlevels),
+##                    ttype=as.integer(arg.list$ttype),
+##                    filter=as.integer(arg.list$filt),
+##                    filterlen=as.integer(arg.list$filtlen),
+##                    threshtype=as.integer(arg.list$threshtype),
+##                    thresh=arg.list$thresh,
+##                    hardness=as.integer(arg.list$hardness),
+##                    minlevel=as.integer(arg.list$min.level),
+##                    maxlevel=as.integer(arg.list$max.level),
+##                    tol=arg.list$tol,
+##                    PACKAGE="wavecuda")
 
-    return(arg.list$x)
-}
+##     return(arg.list$x)
+## }
 
-#' @useDynLib wavecuda RgpuTransformList
-#' @export
-GPUTransformList <- function(xin, direction, nlevels, transform.type, filter){
-    ## xin should be a list
-    ## direction, nlevels, transform.type, filter should be vectors
-    ## all of the same length...
+## #' @useDynLib wavecuda RgpuTransformList
+## #' @export
+## GPUTransformList <- function(xin, direction, nlevels, transform.type, filter){
+##     ## xin should be a list
+##     ## direction, nlevels, transform.type, filter should be vectors
+##     ## all of the same length...
     
-    len <- length(xin)
+##     len <- length(xin)
 
-    if(len<=1) stop("We require a list of xin vectors of length > 1")
+##     if(len<=1) stop("We require a list of xin vectors of length > 1")
 
-    if( (length(direction) != len) || (length(nlevels) != len) || (length(transform.type) != len) || (length(filter) != len) ) stop("Inconsistent length of input list & vectors")
+##     if( (length(direction) != len) || (length(nlevels) != len) || (length(transform.type) != len) || (length(filter) != len) ) stop("Inconsistent length of input list & vectors")
 
-    arg.list <- list()
+##     arg.list <- list()
 
-    for(il in 1:len){
-        arg.list[[il]] <- check.trans.inputs(xin[[il]], direction[il], nlevels[il], transform.type[il], filter[il])
-    }
+##     for(il in 1:len){
+##         arg.list[[il]] <- check.trans.inputs(xin[[il]], direction[il], nlevels[il], transform.type[il], filter[il])
+##     }
 
-    ret.list <- .Call("RgpuTransformList",
-                      arglist <- arg.list,
-                      package="wavecuda")
+##     ret.list <- .Call("RgpuTransformList",
+##                       arglist <- arg.list,
+##                       package="wavecuda")
 
-    print("Done....")
+##     print("Done....")
 
-    return(ret.list)
+##     return(ret.list)
     
-}
+## }
 
 #' @export
 wstCV1 <- function (ndata, ll = 3, type = "soft", filter.number = 10, family = "DaubLeAsymm", 

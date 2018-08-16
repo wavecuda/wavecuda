@@ -1,4 +1,6 @@
-## Rcpp::compileAttributes()
+Rcpp::compileAttributes()
+devtools::use_rcpp()
+devtools::document()
 devtools::build()
 
 tmpLibLoc <- paste0(getwd(),"/../templib")

@@ -9,7 +9,7 @@
 NumericVector RcpuTransform(NumericVector x, NumericVector xmod, int len, int sense, int nlevels, int ttype, int filter, int filterlen){
   int res;
   wst *w;
-  NumericVector xout = x;
+  NumericVector xout = Rcpp::clone(x);
   // if((ttype != DWT) && (sense == FWD)){
   //   NumericVector xout = xmod;
   // }

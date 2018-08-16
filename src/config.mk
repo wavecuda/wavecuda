@@ -3,6 +3,7 @@
 R_HOME := $(shell R RHOME)
 R_INC := /usr/share/R/include
 R_LIB := $(R_HOME)/lib
+RCPP_INC := /usr/local/lib/R/site-library/Rcpp/include/
 
 # replace these three lines with
 # CUDA_HOME := <path to your cuda install>
