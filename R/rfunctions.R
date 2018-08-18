@@ -163,6 +163,7 @@ return.thresh <- function(arglist){
 }
 
 #' @export
+#' @useDynLib wavecuda RcpuTransform
 CPUTransform <- function(xin, direction, nlevels, transform.type, filter){
 
     ## add WST object creation...

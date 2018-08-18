@@ -6,7 +6,7 @@ include config.mk
 
 # File with functions calling everything
 
-R_FUNCS = rfunctions.cpp
+R_FUNCS = rfunctions.cu
 
 ## Our shared library file
 SH_LIB = wavecuda.so
@@ -21,6 +21,7 @@ SHELL = /bin/sh
 
 ## CPP variables
 WAVEC_CXX = g++
+##WAVEC_CXX = gcc
 WAVEC_CFLAGS = -fopenmp -fPIC $(WAVEC_INCS) ## fpic required for R shared library
 WAVEC_G = -g3 -pg
 WAVEC_OPT = -O3 -ffast-math
@@ -31,12 +32,12 @@ WAVEC_HEADS = utils.h wvtheads.h wavutils.h transform.h
 WAVEC_OS = utils.o wavutils.o
 WAVEC_WOS = daub4.o haar.o la8.o c6.o thresh.o
 WAVEC_TOS = transform.o
-#LIBS = -lm -lstdc++ -lcudart #for cuda runtime API linkage
+WAVEC_LIBS = -lm -lstdc++ -lcudart -lcuda #for cuda runtime API linkage
 WAVEC_PROF = gmon.out
 
 
-PKG_CXXFLAGS += -fopenmp -fPIC
-PKG_CPPFLAGS += $(WAVEC_INCS)
+PKG_CXXFLAGS = -fopenmp -fPIC
+PKG_CPPFLAGS = $(WAVEC_INCS)
 
 
 ## CUDA variables
@@ -73,10 +74,11 @@ all: $(SH_LIB)
 $(SH_LIB): wc_code
 
 wc_code: $(R_FUNCS) $(WAVEC_HEADS) $(WAVEC_CUHEADS) $(WAVEC_OS) $(WAVEC_CUOS) $(WAVEC_WOS) $(WAVEC_CUWOS) $(WAVEC_TOS) $(WAVEC_CUTOS) rfunctions.o
-##	$(WAVEC_CUC) -shared $(WAVEC_CUFLAGS) $(WAVEC_CUOPT) $(WAVEC_OS) $(WAVEC_CUOS) $(WAVEC_WOS) $(WAVEC_CUWOS) $(WAVEC_TOS) $(WAVEC_CUTOS) $(WAVEC_LD_PARAMS) $(WAVEC_LIBS) rfunctions.o -o $@ $(WAVEC_CULIBS)
+##	$(WAVEC_CUC) -shared $(WAVEC_CUFLAGS) $(WAVEC_CUOPT) $(WAVEC_OS) $(WAVEC_CUOS) $(WAVEC_WOS) $(WAVEC_CUWOS) $(WAVEC_TOS) $(WAVEC_CUTOS) $(WAVEC_LD_PARAMS) rfunctions.o -o $@ $(WAVEC_CULIBS) $(WAVEC_LIBS)
 
 rfunctions.o: $(R_FUNCS) $(WAVEC_HEADS) $(WAVEC_CUHEADS) $(WAVEC_OS) $(WAVEC_CUOS) $(WAVEC_WOS) $(WAVEC_CUWOS) $(WAVEC_TOS) $(WAVEC_CUTOS)
-	$(WAVEC_CUC) $(WAVEC_CUFLAGS) $(WAVEC_CUOPT) $(WAVEC_INCS) $(WAVEC_LD_PARAMS) $(WAVEC_LIBS) -c -o $@ $(R_FUNCS) $(WAVEC_CULIBS)
+	$(WAVEC_CUC) $(WAVEC_CUFLAGS) $(WAVEC_CUOPT) $(WAVEC_INCS) $(WAVEC_LD_PARAMS) -c -o $@ $(R_FUNCS) $(WAVEC_CULIBS) $(WAVEC_LIBS)
+	##$(WAVEC_CXX) $(WAVEC_CFLAGS) $(WAVEC_OPT) $(WAVEC_INCS) $(WAVEC_LD_PARAMS) -c -o $@ $(R_FUNCS) $(WAVEC_CULIBS) $(WAVEC_LIBS)
 
 cutab%: $(WAVEC_CUOS) $(WAVEC_OS) tabletime%.cu %cuda.o %.o
 	$(WAVEC_CUC) $(WAVEC_CUFLAGS) $(WAVEC_CUOPT) -o $@ $^ $(WAVEC_CULIBS)

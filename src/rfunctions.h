@@ -13,6 +13,9 @@ using namespace Rcpp;
 #define UNIV 1
 #define CV 2
 
+// [[Rcpp::export]]
+NumericVector RcpuTransform(NumericVector x, NumericVector xmod, int len, int sense, int nlevels, int ttype, int filter, int filterlen);
+
 // extern "C" {
 //   void RcpuTransform(real* x, real* xmod, int *len, int * sense, int* nlevels, int * ttype, int * filter, int * filterlen);
 //   // transform a given vector input using the CPU

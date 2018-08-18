@@ -1,4 +1,4 @@
-#include "rfunctions.cuh"
+#include "rfunctions.h"
 
 //' Rcpu Transform
 //'
