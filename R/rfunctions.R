@@ -527,6 +527,7 @@ WST.to.wavethresh <- function(XW, showWarnings = TRUE){
                               v = xw_df[Level == l, W])
     }
 
+    warning("Haven't yet implemented scaling coeffs transfer")
     ## need to add scaling coeffs for top layers
     
     return(XW_wavethresh)
