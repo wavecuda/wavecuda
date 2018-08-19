@@ -40,13 +40,12 @@ getCoeffLevel <- function(xw, level, coeffType = "d"){
 #' @export
 makeLevelNVec <- function(XW,levelList){
     if(XW$ttype == "DWT"){
-    lnv <- rep(0,XW$len)
-    levels = XW$nlevels
-    for(l in 1:levels)
-        lnv[levelList[[l]]] <- l
+        lnv <- rep(0,XW$len)
+        for(l in 1:XW$nlevels)
+            lnv[levelList[[l]]] <- l
     }
     if(substr(XW$ttype,1,5) == "MODWT"){
-        lnv <- rep(1:levels, each = XW$len)
+        lnv <- rep(1:XW$nlevels, each = XW$len)
     }
     lnv
 }
@@ -239,4 +238,19 @@ plotMODWT <- function(Xwav, method = "dp"){
 }
 
 
+#' @export
+plot.WST <- function(Xwav){
+    xw_df <- WST.to.DT(Xwav, forPlotting = TRUE)
+    ## turn WST object into data table
 
+    ## now we plot with ggplot...
+    p <- ggplot(data = xw_df, mapping=aes(x = Translate, y = W, fill = as.factor(minmax))) +
+        geom_bar(stat = "identity") +
+        scale_fill_manual(breaks = c("0","1","2"), values=c(rgb(0,0,0,1), rgb(1,1,1,0), rgb(1,1,1,0)),guide=FALSE ) +
+        facet_grid(Level ~ ., scales = "free_y", as.table = F, labeller = label_both) +
+        scale_x_continuous(breaks=seq(0, Xwav$len, Xwav$len/8 )) +
+        labs(title = paste("Wavelet Decomposition,",Xwav$filt,Xwav$ttype), y = "Wavelet Coefficients")   
+
+    p
+    return(p)
+}

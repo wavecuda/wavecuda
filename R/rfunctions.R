@@ -4,7 +4,7 @@
 
 #' @export
 check.trans.inputs <- function(xin,direction,nlevels,transform.type,filter){
-    ttype <- switch(transform.type,"DWT"=0,"MODWT.TO"=1,"MODWT.PO"=2)
+    ttype <- switch(transform.type,"DWT"=0,"MODWT"=1)
     if(is.null(ttype)) stop("Unexpected transform type")
     
     filt <- switch(filter,"Haar"=1,"D4"=2,"C6"=3,"LA8"=4)
@@ -21,7 +21,7 @@ check.trans.inputs <- function(xin,direction,nlevels,transform.type,filter){
 
     if(ttype == 0){
         ## DWT. We only use xin, which we set to x
-        x <- xin
+        x <- as.double(xin)
         xmod <- numeric(0)
         len <- lenxin
         if(log2(len) != round(log2(len))) stop("Need length to be power of 2")
@@ -30,7 +30,7 @@ check.trans.inputs <- function(xin,direction,nlevels,transform.type,filter){
         if(sense==1){
             ## FWD: xin is our input, x
             ## and we need to allocate xmod
-            x <- xin
+            x <- as.double(xin)
             len <- lenxin
             if(log2(len) != round(log2(len))) stop("Need length to be power of 2")
             xmod <- rep(0,len*2*log2(len))
@@ -38,10 +38,10 @@ check.trans.inputs <- function(xin,direction,nlevels,transform.type,filter){
             ## BWD: xin is xmod, a transformed MODWT vector
             ## and we need to allocate x in which to store
             ## the reconstructed vector
-            xmod <- xin
+            xmod <- as.double(xin)
             len <- lenxin/(2*nlevels)
             if(log2(len) != round(log2(len))) stop("Was this really a MODWT vector? If so, check nlevels. I calculate the reconstruction vector to be of inappropriate size.")
-            x <- rep(0,len)
+            x <- as.double(rep(0,len))
         }    
     }
     maxlevels <- floor(log2(len/filtlen))+1
@@ -424,4 +424,110 @@ wstCV1 <- function (ndata, ll = 3, type = "soft", filter.number = 10, family = "
     xvwr <- AvBasis.wst(nwstT)
     list(ndata = ndata, xvwr = xvwr, xvwrWSTt = nwstT, uvt = uv, 
         xvthresh = x1, xkeep = xkeep, fkeep = fkeep)
+}
+
+#'@export
+print.WST <- function(x){
+    cat("--------------------------------------\n")
+    cat("Wavecuda STructure object WST class")
+    cat("\n of type:                  ",x$ttype)
+    cat("\n with filter:              ",x$filt)
+    cat("\n levels of transform:      ",x$nlevels)
+    cat("\n original vector of length:",x$len)
+    cat("\n")
+    cat("--------------------------------------\n")
+}
+
+#' @import data.table
+#' @export
+WST.to.DT <- function(Xwav, scaling = TRUE, forPlotting = FALSE){
+    levelList <- sapply(X = 1:Xwav$nlevels, FUN = function(l) getCoeffLevel(Xwav,l,"d"), simplify = F)
+
+    if(forPlotting)
+        scaling <- FALSE
+    
+    ## we make placeholders for min/max treatment
+    ## because we can't plot y_free with symmetric axes
+    ## so we create dummy rows at the end of the data frame
+    ## all with translate value of 0
+    ## and initialise these with NA for W
+    padNA <- rep(NA, Xwav$nlevels * 2)
+    pad0 <- rep(0, Xwav$nlevels * 2)
+    padl <- rep(1:Xwav$nlevels, each = 2) # levels
+    padmm <- rep(1:2, Xwav$nlevels) # minmax
+
+    if(Xwav$ttype == "DWT"){
+        xw_df <- data.table(W = c(Xwav$x, padNA),
+                            Level = c(makeLevelNVec(Xwav,levelList), padl),
+                            Translate = c(makeLevelTVec(Xwav,levelList), pad0),
+                            ## time component of the coef through the transform
+                            minmax = c(rep(0,length(Xwav$x)),padmm)
+                            ## 0 for values of the transform
+                            ## 1 for  min(-abs(W))
+                            ## 2 for  max(abs(W)) per level
+                            )
+        ## xw_df[,T2 := ifelse(.I <= Wxwav$len, (.I-1)/2,0)]
+        ## xw_df[,L2 := quickLVec(.I)]
+        ## not correct
+    }
+    if(Xwav$ttype == "MODWT"){
+        detailCoeffSelector <- (1:Xwav$len) + Xwav$len + rep(2*(0:(Xwav$nlevels-1))*Xwav$len,each = Xwav$len)
+        xw_df <- data.table(W = c(Xwav$xmod[detailCoeffSelector], padNA),
+                            Level = c(makeLevelNVec(Xwav,levelList),padl),
+                            Translate = c(makeLevelTVec(Xwav, levelList),pad0),
+                            ## time component of the coef through the transform
+                            minmax = c(rep(0,length(Xwav$xmod)/2),padmm)
+                            ## 0 for values of the transform
+                            ## 1 for  min(-abs(W))
+                            ## 2 for  max(abs(W)) per level
+                            )
+    }
+    xw_df[, W := replace(W, Translate == 0, max(abs(W), na.rm = T)),
+          by = c("Level")]
+    ## replace the created NA values with max abs per level
+    xw_df[(Translate == 0) & (minmax == 1), W:=-W]
+    ## set the min vals per level
+    xw_df <- xw_df[Level >0]
+    ## filter -> will be done below
+
+    if(!forPlotting){
+        xw_df <- xw_df[minmax == 0]
+        ## remove min max extra values
+        xw_df[,minmax := NULL]
+        ## remove min max column
+    }
+    
+    return(xw_df)
+}
+
+#' @import data.table
+#' @export
+WST.to.wavethresh <- function(XW, showWarnings = TRUE){
+    xw_df <- WST.to.DT(XW)
+    ## need scaling too :(
+
+    filter_number = switch(XW$filt,"Haar"=1,"D4"=2,"C6"=3, "LA"=4)
+    family = switch(XW$filt,"Haar"="DaubExPhase","D4"="DaubExPhase","C6"="DaubLeAsymm", "LA"="DaubLeAsymm")
+    
+    if((XW$filt == "C6") & showWarnings)
+        warning("Coiflets not implemented in wavethresh; you will not be able reconstruct with wavethresh")
+
+    if((XW$ttype == "MODWT") & showWarnings)
+        warning("Wavethresh uses a different ordering in MODWT coefficients")
+    
+    XW_wavethresh <- wd(rep(0,XW$len),
+                        filter.number = filter_number,
+                        family = family,
+                        type = switch(XW$ttype, "DWT" = "wavelet", "MODWT" = "station"),
+                        bc = "periodic")
+    
+    for(l in 1:XW$nlevels){
+        XW_wavethresh <- putD(XW_wavethresh,
+                              level = XW_wavethresh$nlevels - l,
+                              v = xw_df[Level == l, W])
+    }
+
+    ## need to add scaling coeffs for top layers
+    
+    return(XW_wavethresh)
 }

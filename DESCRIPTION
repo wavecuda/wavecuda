@@ -6,10 +6,9 @@ Description: This package performs wavelet transforms using CPU and GPU,
     along with some basic plotting and thresholding. Noteably, we implement GPU-
     accelerated wavelet cross validation.
 Depends:
-    R (>= 3.2.2),
+    R (>= 3.2.2)
+Imports:
     data.table,
-    dplyr,
-    tidyr,
     ggplot2
 License: GPL
 LazyData: true
