@@ -1,7 +1,13 @@
-
-## if(!is.loaded("wavecuda"))
-##     dyn.load("../src/wavecuda.so")
-
+#' check.trans.inputs
+#' Checks the inputs for a transformation and converts them into the required format for the library.
+#' Internal function
+#'
+#' @param xin Input vector, normally a vector to be transformed into the wavelet domain
+#' @param direction "FWD" or "BWD"
+#' @param nlevels Number of levels of the wavelet transform to perform
+#' @param transform.type "DWT" or "MODWT" (time ordered)
+#' @param filter Wavelet filter to use
+#'
 #' @export
 check.trans.inputs <- function(xin,direction,nlevels,transform.type,filter){
     ttype <- switch(transform.type,"DWT"=0,"MODWT"=1)
@@ -56,6 +62,19 @@ check.trans.inputs <- function(xin,direction,nlevels,transform.type,filter){
     list(x=x,xmod=xmod,len=len,sense=sense,nlevels=nlevels,ttype=ttype,filt=filt,filtlen=filtlen)
 }
 
+#' check.thresh.inputs
+#' Checks the inputs for thresholding and converts them into the required format for the library
+#' Internal function
+#'
+#' @param xin Input vector, normally a vector to be transformed into the wavelet domain
+#' @param nlevels Number of levels of the wavelet transform to perform
+#' @param transform.type "DWT" or "MODWT" (time ordered)
+#' @param filter Wavelet filter to use
+#' @param hard.soft "hard" or "soft" thresholding
+#' @param thresh Threshold value
+#' @param min.level Minimum level for thresholding
+#' @param max.level Maximum level for thresholding
+#'
 #' @export
 check.thresh.inputs <- function(xin,nlevels,transform.type, filter,hard.soft,thresh,min.level,max.level){
     arg.list <- check.trans.inputs(xin,"BWD",nlevels,transform.type,filter)
@@ -85,6 +104,21 @@ check.thresh.inputs <- function(xin,nlevels,transform.type, filter,hard.soft,thr
     return(arg.list)
 }
 
+#' check.smooth.inputs
+#' Checks the inputs for smoothing and converts them into the required format for the library
+#' Internal function
+#'
+#' @param xin Input vector, normally a vector to be transformed into the wavelet domain
+#' @param nlevels Number of levels of the wavelet transform to perform
+#' @param transform.type "DWT" or "MODWT" (time ordered)
+#' @param filter Wavelet filter to use
+#' @param thresh.type "manual", "univ" or "cv"
+#' @param hard.soft "hard" or "soft" thresholding
+#' @param thresh Threshold value
+#' @param min.level Minimum level for thresholding
+#' @param max.level Maximum level for thresholding
+#' @param tol Tolerance for cross validation smoothing
+#'
 #' @export
 check.smooth.inputs <- function(xin,nlevels,transform.type,filter,thresh.type,thresh,hard.soft,min.level,max.level,tol){
     arg.list <- check.trans.inputs(xin,"FWD",nlevels,transform.type,filter)
@@ -127,6 +161,13 @@ check.smooth.inputs <- function(xin,nlevels,transform.type,filter,thresh.type,th
     
 }
 
+#' return.trans
+#' Puts the results into a nice structure for returning the result of a transform.
+#' Internal function
+#'
+#' @param arglist Input arguments for the transform
+#' @param argsin Input arguments for the transform
+#'
 #' @export
 return.trans <- function(arglist, argsin){
     ## returning a nice wavelet structure
@@ -143,8 +184,14 @@ return.trans <- function(arglist, argsin){
     return(wvt_return)
 }
 
+#' return.thresh
+#' Puts the results into a nice structure for returning the result of thresholding.
+#'
+#'
+#'
 #' @export
 return.thresh <- function(arglist){
+    ## to
     if(arglist$ttype>0){
         return(arglist$xmod)
     }
