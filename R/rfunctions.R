@@ -66,10 +66,7 @@ check.trans.inputs <- function(xin,direction,nlevels,transform.type,filter){
 #' Checks the inputs for thresholding and converts them into the required format for the library
 #' Internal function
 #'
-#' @param xin Input vector, normally a vector to be transformed into the wavelet domain
-#' @param nlevels Number of levels of the wavelet transform to perform
-#' @param transform.type "DWT" or "MODWT" (time ordered)
-#' @param filter Wavelet filter to use
+#' @param xwav WST object 
 #' @param hard.soft "hard" or "soft" thresholding
 #' @param thresh Threshold value
 #' @param min.level Minimum level for thresholding
@@ -172,6 +169,8 @@ check.smooth.inputs <- function(xin,nlevels,transform.type,filter,thresh.type,th
 return.trans <- function(arglist, argsin){
     ## returning a nice wavelet structure
 
+    ## modify to return transform vector always in same value
+    
     wvt_return <- structure(list("x" = arglist$x,
                                  "ttype" = argsin$ttype,
                                  "filt" = argsin$filter,
@@ -187,7 +186,7 @@ return.trans <- function(arglist, argsin){
 #' return.thresh
 #' Puts the results into a nice structure for returning the result of thresholding.
 #'
-#'
+#' @param arglist Input arguments for the transform
 #'
 #' @export
 return.thresh <- function(arglist){
@@ -200,6 +199,26 @@ return.thresh <- function(arglist){
     }
 }
 
+#' CPUTransform
+#'
+#' Wavelet transform using the CPU.
+#' The input vector can be in the time domain or wavelet domain.
+#' Supports DWT and (time-ordered) MODWT.
+#' Supports Haar, D4, C6 and LA8 filters.
+#' Allows the user to specify number of levels of transform required. Note that the maximum number of levels implemented is \eqn{\log_2{n} - b+1} where \eqn{n} is the length of the input vector and \eqn{b = ceiling (\log_2{L})} where \eqn{L} is the filter length. This means that we only allow transformations up to the level where the filter does not wrap around the coefficients more than once: with the Haar filter we do the full dyadic transform, whereas with the LA8 filter we stop after filtering 8 coefficients.
+#'
+#' The DWT is transformed in-place after copying the input vector, whereas the MODWT requires extra memory allocation. The structure of the transformed DWT vector is the standard interleaved form. The structure of the transformed MODWT vector is \eqn{n} scaling coefficients then detail coefficients, concatenated sequentially for each layer. The best way to access the coefficients for each level is via \code{\link{WST.to.DT}}.
+#' 
+#' @param xin Vector input
+#' @param direction "FWD" or "BWD"
+#' @param nlevels Number of levels of transform; 0 means full transform
+#' @param transform.type "DWT" or "MODWT"
+#' @param filter e.g. "Haar"
+#'
+#' @return Returns a WST object containing the transform and details.
+#'
+#' @seealso \code{\link{GPUTransform}}, \code{\link{CPUThreshold}}, \code{\link{CPUSmooth}}, \code{\link{GPUSmooth}}, \code{\link{WST.to.DT}}
+#' 
 #' @useDynLib wavecuda RcpuTransform
 #' @export
 CPUTransform <- function(xin, direction, nlevels, transform.type, filter){
@@ -249,9 +268,31 @@ GPUTransform <- function(xin, direction, nlevels, transform.type, filter){
     return(return.trans(arg.list, args.in))
 }
 
+## #' @useDynLib wavecuda RcpuThreshold
+## #' @export
+## CPUThreshold <- function(xin,nlevels,transform.type,filter,thresh,hard.soft,min.level,max.level){
+##     arg.list <- check.thresh.inputs(xin,nlevels,transform.type, filter,hard.soft,thresh,min.level,max.level)
+
+##     arg.list <- .C("RcpuThreshold",
+##                    x=arg.list$x,
+##                    xmod=arg.list$xmod,
+##                    len=as.integer(arg.list$len),
+##                    nlevels=as.integer(arg.list$nlevels),
+##                    ttype=as.integer(arg.list$ttype),
+##                    filter=as.integer(arg.list$filt),
+##                    filterlen=as.integer(arg.list$filtlen),
+##                    thresh=arg.list$thresh,
+##                    hardness=as.integer(arg.list$hardness),
+##                    minlevel=as.integer(arg.list$min.level),
+##                    maxlevel=as.integer(arg.list$max.level),
+##                    PACKAGE="wavecuda")
+
+##     return(return.thresh(arg.list))
+## }
+
 #' @useDynLib wavecuda RcpuThreshold
 #' @export
-CPUThreshold <- function(xin,nlevels,transform.type,filter,thresh,hard.soft,min.level,max.level){
+CPUThreshold <- function(xwav,thresh,hard.soft,min.level,max.level){
     arg.list <- check.thresh.inputs(xin,nlevels,transform.type, filter,hard.soft,thresh,min.level,max.level)
 
     arg.list <- .C("RcpuThreshold",
@@ -270,6 +311,7 @@ CPUThreshold <- function(xin,nlevels,transform.type,filter,thresh,hard.soft,min.
 
     return(return.thresh(arg.list))
 }
+
 
 #' @useDynLib wavecuda RcpuSmooth
 #' @export
@@ -321,8 +363,8 @@ GPUSmooth <- function(xin,nlevels,transform.type,filter,thresh.type,thresh=NULL,
     return(arg.list$x)
 }
 
-#' @useDynLib wavecuda RgpuTransformList
-#' @export
+## #' @useDynLib wavecuda RgpuTransformList
+## #' @export
 GPUTransformList <- function(xin, direction, nlevels, transform.type, filter){
     ## xin should be a list
     ## direction, nlevels, transform.type, filter should be vectors
@@ -350,7 +392,7 @@ GPUTransformList <- function(xin, direction, nlevels, transform.type, filter){
     
 }
 
-#' @export
+## #' @export
 wstCV1 <- function (ndata, ll = 3, type = "soft", filter.number = 10, family = "DaubLeAsymm", 
     tol = 0.01, verbose = 0, plot.it = FALSE, norm = l2norm, 
     InverseType = "average", uvdev = madmad) 
@@ -487,7 +529,7 @@ print.WST <- function(x){
 
 #' @import data.table
 #' @export
-WST.to.DT <- function(Xwav, scaling = TRUE, forPlotting = FALSE){
+WSTtoDT <- function(Xwav, scaling = TRUE, forPlotting = FALSE){
     levelList <- sapply(X = 1:Xwav$nlevels, FUN = function(l) getCoeffLevel(Xwav,l,"d"), simplify = F)
 
     if(forPlotting)
@@ -548,10 +590,11 @@ WST.to.DT <- function(Xwav, scaling = TRUE, forPlotting = FALSE){
 }
 
 #' @import data.table
+#' @import wavethresh
 #' @export
-WST.to.wavethresh <- function(XW, showWarnings = TRUE){
+WSTtowavethresh <- function(XW, showWarnings = TRUE){
     xw_df <- WST.to.DT(XW)
-    ## need scaling too :(
+    ## need scaling too :)
 
     filter_number = switch(XW$filt,"Haar"=1,"D4"=2,"C6"=3, "LA"=4)
     family = switch(XW$filt,"Haar"="DaubExPhase","D4"="DaubExPhase","C6"="DaubLeAsymm", "LA"="DaubLeAsymm")
@@ -562,7 +605,7 @@ WST.to.wavethresh <- function(XW, showWarnings = TRUE){
     if((XW$ttype == "MODWT") & showWarnings)
         warning("Wavethresh uses a different ordering in MODWT coefficients")
     
-    XW_wavethresh <- wd(rep(0,XW$len),
+    XW_wavethresh <- wavethresh::wd(rep(0,XW$len),
                         filter.number = filter_number,
                         family = family,
                         type = switch(XW$ttype, "DWT" = "wavelet", "MODWT" = "station"),

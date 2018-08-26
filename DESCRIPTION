@@ -9,7 +9,9 @@ Depends:
     R (>= 3.2.2)
 Imports:
     data.table,
-    ggplot2
+    ggplot2,
+    wavethresh
 License: GPL
 LazyData: true
 RoxygenNote: 6.1.0
+Encoding: UTF-8

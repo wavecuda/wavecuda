@@ -104,6 +104,14 @@ quickLVec <- function(RN, maxlevel){
     else return(l+1)
 }
 
+signifDown <- function(x, digits){
+    m <- 10^floor(log10(abs(x))-(digits - 1))
+    ## 'round' is necessary in case of
+    ## small errors from floating point accuracy
+    xSignifDown <- floor(round(abs(x)/m,3))*m
+    return(sign(x)*xSignifDown)
+}
+
 #' Plotting for WST objects
 #' Plots the wavelet transform at all levels using ggplot.
 #'
@@ -112,14 +120,22 @@ quickLVec <- function(RN, maxlevel){
 #' @import ggplot2
 #' @export
 plot.WST <- function(Xwav){
-    xw_df <- WST.to.DT(Xwav, forPlotting = TRUE)
+    xw_df <- WSTtoDT(Xwav, forPlotting = TRUE)
     ## turn WST object into data table
 
     ## now we plot with ggplot...
     p <- ggplot(data = xw_df, mapping=aes(x = Translate, y = W, fill = as.factor(minmax))) +
+        ## minmax ~ plus/minus abs max
         geom_bar(stat = "identity") +
         scale_fill_manual(breaks = c("0","1","2"), values=c(rgb(0,0,0,1), rgb(1,1,1,0), rgb(1,1,1,0)),guide=FALSE ) +
+        ## plot the min/max values as transparent
+        scale_y_continuous(breaks = function(lims) return(c(signifDown(lims[1],1),0,signifDown(lims[2],1)))) +
+        ## adds 3 labels to the y axis, at signifDown(min,1), signifDown(max,1) and 0
+        ## where signifDown rounds down to 1 s.f.
+        ## (if we rounded up, the axis label wouldn't be visible)
         facet_grid(Level ~ ., scales = "free_y", as.table = F, labeller = label_both) +
+        ## free y axis scale allows us to scale by level
+        ## and the min/max ensures symmetric axes
         scale_x_continuous(breaks=seq(0, Xwav$len, Xwav$len/8 )) +
         labs(title = paste("Wavelet Decomposition,",Xwav$filt,Xwav$ttype), y = "Wavelet Coefficients")   
 
