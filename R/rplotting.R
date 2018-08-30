@@ -13,17 +13,17 @@ getCoeffLevel <- function(xw, level, coeffType = "d"){
 
     if(class(xw) != "WST")
         stop("WST type required")
-    
+
     ## check level <= level of transform
     if((0 >= level)|(level>xw$nlevels)|level != as.integer(level))
         stop("Integer level expected, between 1 and ", xw$nlevels)
-    
+
     ## type = DWT
 
     ## if DWT, also check that scaling coeffs available
     ## only if requested number == level
 
-    stopifnot((coeffType == "d" | coeffType == "s"))    
+    stopifnot((coeffType == "d" | coeffType == "s"))
     d_bool = (coeffType == "d") ## detail or scaling
     n = xw$len
 
@@ -40,7 +40,7 @@ getCoeffLevel <- function(xw, level, coeffType = "d"){
         start = 1
         gap_i = 1
     }
-    
+
     dlevel_i = seq(from = start, to = n, by = gap_i)
     return(dlevel_i)
 }
@@ -104,6 +104,14 @@ quickLVec <- function(RN, maxlevel){
     else return(l+1)
 }
 
+#' signifDown
+#' Rounds down to a specified number of signficant figures.
+#' Internal function, used for plotting labels.
+#'
+#' @param x Number to round
+#' @param digits Number of significant figures
+#'
+#' @export
 signifDown <- function(x, digits){
     m <- 10^floor(log10(abs(x))-(digits - 1))
     ## 'round' is necessary in case of
@@ -137,7 +145,7 @@ plot.WST <- function(Xwav){
         ## free y axis scale allows us to scale by level
         ## and the min/max ensures symmetric axes
         scale_x_continuous(breaks=seq(0, Xwav$len, Xwav$len/8 )) +
-        labs(title = paste("Wavelet Decomposition,",Xwav$filt,Xwav$ttype), y = "Wavelet Coefficients")   
+        labs(title = paste("Wavelet Decomposition,",Xwav$filt,Xwav$ttype), y = "Wavelet Coefficients")
 
     p
     return(p)
