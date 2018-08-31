@@ -5,7 +5,7 @@
 \title{return.thresh
 Puts the results into a nice structure for returning the result of thresholding.}
 \usage{
-return.thresh(arglist)
+return.thresh(xwav, arg.list)
 }
 \arguments{
 \item{arglist}{Input arguments for the transform}

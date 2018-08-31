@@ -448,6 +448,19 @@ GPUReconstruct <- function(xwav){
 ##     return(return.thresh(arg.list))
 ## }
 
+#' CPUThreshold
+#'
+#' Threshold a transformed vector using a manual threshold, with a hard or soft threshold and specifying a range of resolution levels to threshold. Uses the CPU. For further thresholding schemes, use the Smoothing functions or wavethresh.
+#' Using the min and max levels, we have the flexibility to implement level-dependent thresholds.
+#'
+#' @param xwav WST object
+#' @param thresh Threshold value
+#' @param hard.soft "hard" or "soft"
+#' @param min.level Min level of thresholding
+#' @param max.level Max level of thresholding, the 'primary resolution'
+#'
+#' @seealso \code{\link{CPUSmooth}}, \code{\link{GPUSmooth}}, \code{\link{WSTtowavethresh}}
+#'
 #' @useDynLib wavecuda RcpuThreshold
 #' @export
 CPUThreshold <- function(xwav,thresh,hard.soft,min.level,max.level){
@@ -470,7 +483,23 @@ CPUThreshold <- function(xwav,thresh,hard.soft,min.level,max.level){
     return(return.thresh(xwav,arg.list))
 }
 
-
+#' CPUSmooth
+#'
+#' Wavelet smoothing of a raw input vector. This function will perform a wavelet transform, threshold using a chosen scheme and then reconstruct. This is done on the CPU without copying the memory back and forth. Supported thresholding schemes are manual, universal and Nason's two-fold cross validation (cv). Options are hard or soft threshold, specifying a range of resolution levels to threshold and a tolerance parameter for the CV scheme.
+#'
+#' @param xin Vector input
+#' @param nlevels Number of levels of transform; 0 means full transform
+#' @param transform.type "DWT" or "MODWT"
+#' @param filter e.g. "Haar"
+#' @param thresh.type "manual", "univ" or "cv"
+#' @param thresh Threshold value
+#' @param hard.soft "hard" or "soft"
+#' @param min.level Min level of thresholding
+#' @param max.level Max level of thresholding, the 'primary resolution'
+#' @param tol Tolerance for CV search
+#'
+#' @seealso \code{\link{CPUThreshold}}, \code{\link{GPUSmooth}}, \code{\link{WSTtowavethresh}}
+#'
 #' @useDynLib wavecuda RcpuSmooth
 #' @export
 CPUSmooth <- function(xin,nlevels,transform.type,filter,thresh.type,thresh=NULL,hard.soft,min.level,max.level,tol=0.01){
@@ -495,6 +524,23 @@ CPUSmooth <- function(xin,nlevels,transform.type,filter,thresh.type,thresh=NULL,
     return(arg.list$x)
 }
 
+#' GPUSmooth
+#'
+#' Wavelet smoothing of a raw input vector. This function will perform a wavelet transform, threshold using a chosen scheme and then reconstruct. This is done on the GPU without copying the memory back and forth. Supported thresholding schemes are manual and Nason's two-fold cross validation (cv). NB we don't support universal thresholding as it is not efficient on the GPU. Options are hard or soft threshold, specifying a range of resolution levels to threshold and a tolerance parameter for the CV scheme.
+#'
+#' @param xin Vector input
+#' @param nlevels Number of levels of transform; 0 means full transform
+#' @param transform.type "DWT" or "MODWT"
+#' @param filter e.g. "Haar"
+#' @param thresh.type "manual" or "cv"
+#' @param thresh Threshold value
+#' @param hard.soft "hard" or "soft"
+#' @param min.level Min level of thresholding
+#' @param max.level Max level of thresholding, the 'primary resolution'
+#' @param tol Tolerance for CV search
+#'
+#' @seealso \code{\link{CPUThreshold}}, \code{\link{GPUSmooth}}, \code{\link{WSTtowavethresh}}
+#'
 #' @useDynLib wavecuda RgpuSmooth
 #' @export
 GPUSmooth <- function(xin,nlevels,transform.type,filter,thresh.type,thresh=NULL,hard.soft,min.level,max.level,tol=0.01){
@@ -521,158 +567,166 @@ GPUSmooth <- function(xin,nlevels,transform.type,filter,thresh.type,thresh=NULL,
     return(arg.list$x)
 }
 
+## to be added - GPU transform list to efficiently transform a list of vectors on the GPU
+## to make use of streams
 ## #' @useDynLib wavecuda RgpuTransformList
 ## #' @export
-GPUTransformList <- function(xin, direction, nlevels, transform.type, filter){
-    ## xin should be a list
-    ## direction, nlevels, transform.type, filter should be vectors
-    ## all of the same length...
+## GPUTransformList <- function(xin, direction, nlevels, transform.type, filter){
+##     ## xin should be a list
+##     ## direction, nlevels, transform.type, filter should be vectors
+##     ## all of the same length...
 
-    len <- length(xin)
+##     len <- length(xin)
 
-    if(len<=1) stop("We require a list of xin vectors of length > 1")
+##     if(len<=1) stop("We require a list of xin vectors of length > 1")
 
-    if( (length(direction) != len) || (length(nlevels) != len) || (length(transform.type) != len) || (length(filter) != len) ) stop("Inconsistent length of input list & vectors")
+##     if( (length(direction) != len) || (length(nlevels) != len) || (length(transform.type) != len) || (length(filter) != len) ) stop("Inconsistent length of input list & vectors")
 
-    arg.list <- list()
+##     arg.list <- list()
 
-    for(il in 1:len){
-        arg.list[[il]] <- check.trans.inputs(xin[[il]], direction[il], nlevels[il], transform.type[il], filter[il])
-    }
+##     for(il in 1:len){
+##         arg.list[[il]] <- check.trans.inputs(xin[[il]], direction[il], nlevels[il], transform.type[il], filter[il])
+##     }
 
-    ret.list <- .Call("RgpuTransformList",
-                      arglist <- arg.list,
-                      package="wavecuda")
+##     ret.list <- .Call("RgpuTransformList",
+##                       arglist <- arg.list,
+##                       package="wavecuda")
 
-    print("Done....")
+##     print("Done....")
 
-    return(ret.list)
+##     return(ret.list)
 
-}
+## }
 
-## #' @export
-wstCV1 <- function (ndata, ll = 3, type = "soft", filter.number = 10, family = "DaubLeAsymm",
-    tol = 0.01, verbose = 0, plot.it = FALSE, norm = l2norm,
-    InverseType = "average", uvdev = madmad)
-{
-    ## edit of Nason's wstCV for diagnostics
-    nlev <- log(length(ndata))/log(2)
-    levels <- ll:(nlev - 1)
-    nwst <- wst(ndata, filter.number = filter.number, family = family)
-    uv <- threshold(nwst, levels = levels, type = type, policy = "universal",
-        dev = madmad, return.thresh = TRUE)[1]
-    if (verbose == 1)
-        cat("Now optimising cross-validated error estimate\n")
-    levels <- ll:(nlev - 2)
-    R <- 0.61803399
-    C <- 1 - R
-    ax <- 0
-    bx <- uv/2
-    cx <- uv
-    x0 <- ax
-    x3 <- cx
-    if (abs(cx - bx) > abs(bx - ax)) {
-        x1 <- bx
-        x2 <- bx + C * (cx - bx)
-    }
-    else {
-        x2 <- bx
-        x1 <- bx - C * (bx - ax)
-    }
-    fa <- GetRSSWST(ndata, threshold = ax, levels = levels, type = type,
-        filter.number = filter.number, family = family, norm = norm,
-        verbose = verbose, InverseType = InverseType)
-    ## cat("Done 1\n")
-    fb <- GetRSSWST(ndata, threshold = bx, levels = levels, type = type,
-        filter.number = filter.number, family = family, norm = norm,
-        verbose = verbose, InverseType = InverseType)
-    ## cat("Done 2\n")
-    fc <- GetRSSWST(ndata, threshold = cx, levels = levels, type = type,
-        filter.number = filter.number, family = family, norm = norm,
-        verbose = verbose, InverseType = InverseType)
-    ## cat("Done 3\n")
-    f1 <- GetRSSWST(ndata, threshold = x1, levels = levels, type = type,
-        filter.number = filter.number, family = family, norm = norm,
-        verbose = verbose, InverseType = InverseType)
-    ## cat("Done 4\n")
-    f2 <- GetRSSWST(ndata, threshold = x2, levels = levels, type = type,
-        filter.number = filter.number, family = family, norm = norm,
-        verbose = verbose, InverseType = InverseType)
-    ## cat("Done 5\n")
-    xkeep <- c(ax, cx, x1, x2)
-    fkeep <- c(fa, fc, f1, f2)
-    if (plot.it == TRUE) {
-        plot(c(ax, bx, cx), c(fa, fb, fc))
-        text(c(x1, x2), c(f1, f2), lab = c("1", "2"))
-    }
-    cnt <- 3
-    while (abs(x3 - x0) > tol * (abs(x1) + abs(x2))) {
-        if (verbose > 0) {
-            cat("x0=", x0, "x1=", x1, "x2=", x2, "x3=", x3, "\n")
-            cat("f1=", f1, "f2=", f2, "\n")
-        }
-        if (f2 < f1) {
-            x0 <- x1
-            x1 <- x2
-            x2 <- R * x1 + C * x3
-            f1 <- f2
-            f2 <- GetRSSWST(ndata, threshold = x2, levels = levels,
-                type = type, filter.number = filter.number, family = family,
-                norm = norm, verbose = verbose, InverseType = InverseType)
-            if (verbose == 2) {
-                cat("SSQ: ", signif(f2, digits = 3), "\n")
-            }
-            else if (verbose == 1)
-                cat(".")
-            xkeep <- c(xkeep, x2)
-            fkeep <- c(fkeep, f2)
-            if (plot.it == TRUE)
-                text(x2, f2, lab = as.character(cnt))
-            cnt <- cnt + 1
-        }
-        else {
-            x3 <- x2
-            x2 <- x1
-            x1 <- R * x2 + C * x0
-            f2 <- f1
-            f1 <- GetRSSWST(ndata, threshold = x1, levels = levels,
-                type = type, filter.number = filter.number, family = family,
-                norm = norm, verbose = verbose, InverseType = InverseType)
-            if (verbose == 2)
-                cat("SSQ: ", signif(f1, digits = 3), "\n")
-            else if (verbose == 1)
-                cat(".")
-            xkeep <- c(xkeep, x1)
-            fkeep <- c(fkeep, f1)
-            if (plot.it == TRUE)
-                text(x1, f1, lab = as.character(cnt))
-            cnt <- cnt + 1
-        }
-    }
-    if (f1 < f2)
-        tmp <- x1
-    else tmp <- x2
-    x1 <- tmp/sqrt(1 - log(2)/log(length(ndata)))
-    if (verbose == 1)
-        cat("Correcting to ", x1, "\n")
-    else if (verbose == 1)
-        cat("\n")
-    g <- sort.list(xkeep)
-    xkeep <- xkeep[g]
-    fkeep <- fkeep[g]
-    if (verbose >= 1) {
-        cat("Reconstructing CV \n")
-    }
-    nwstT <- threshold(nwst, type = type, levels = levels, policy = "manual",
-        value = x1)
-    nwstT <- threshold(nwstT, type = type, levels = nlevelsWT(nwstT) -
-        1, policy = "universal", dev = uvdev)
-    ## not sure why he does an extra universal threshold here!
-    xvwr <- AvBasis.wst(nwstT)
-    list(ndata = ndata, xvwr = xvwr, xvwrWSTt = nwstT, uvt = uv,
-        xvthresh = x1, xkeep = xkeep, fkeep = fkeep)
-}
+## Nason's CV, with corrected interpolation
+## ## #' @export
+## wstCV1 <- function (ndata, ll = 3, type = "soft", filter.number = 10, family = "DaubLeAsymm",
+##     tol = 0.01, verbose = 0, plot.it = FALSE, norm = l2norm,
+##     InverseType = "average", uvdev = madmad)
+## {
+##     ## edit of Nason's wstCV for diagnostics
+##     nlev <- log(length(ndata))/log(2)
+##     levels <- ll:(nlev - 1)
+##     nwst <- wst(ndata, filter.number = filter.number, family = family)
+##     uv <- threshold(nwst, levels = levels, type = type, policy = "universal",
+##         dev = madmad, return.thresh = TRUE)[1]
+##     if (verbose == 1)
+##         cat("Now optimising cross-validated error estimate\n")
+##     levels <- ll:(nlev - 2)
+##     R <- 0.61803399
+##     C <- 1 - R
+##     ax <- 0
+##     bx <- uv/2
+##     cx <- uv
+##     x0 <- ax
+##     x3 <- cx
+##     if (abs(cx - bx) > abs(bx - ax)) {
+##         x1 <- bx
+##         x2 <- bx + C * (cx - bx)
+##     }
+##     else {
+##         x2 <- bx
+##         x1 <- bx - C * (bx - ax)
+##     }
+##     fa <- GetRSSWST(ndata, threshold = ax, levels = levels, type = type,
+##         filter.number = filter.number, family = family, norm = norm,
+##         verbose = verbose, InverseType = InverseType)
+##     ## cat("Done 1\n")
+##     fb <- GetRSSWST(ndata, threshold = bx, levels = levels, type = type,
+##         filter.number = filter.number, family = family, norm = norm,
+##         verbose = verbose, InverseType = InverseType)
+##     ## cat("Done 2\n")
+##     fc <- GetRSSWST(ndata, threshold = cx, levels = levels, type = type,
+##         filter.number = filter.number, family = family, norm = norm,
+##         verbose = verbose, InverseType = InverseType)
+##     ## cat("Done 3\n")
+##     f1 <- GetRSSWST(ndata, threshold = x1, levels = levels, type = type,
+##         filter.number = filter.number, family = family, norm = norm,
+##         verbose = verbose, InverseType = InverseType)
+##     ## cat("Done 4\n")
+##     f2 <- GetRSSWST(ndata, threshold = x2, levels = levels, type = type,
+##         filter.number = filter.number, family = family, norm = norm,
+##         verbose = verbose, InverseType = InverseType)
+##     ## cat("Done 5\n")
+##     xkeep <- c(ax, cx, x1, x2)
+##     fkeep <- c(fa, fc, f1, f2)
+##     if (plot.it == TRUE) {
+##         plot(c(ax, bx, cx), c(fa, fb, fc))
+##         text(c(x1, x2), c(f1, f2), lab = c("1", "2"))
+##     }
+##     cnt <- 3
+##     while (abs(x3 - x0) > tol * (abs(x1) + abs(x2))) {
+##         if (verbose > 0) {
+##             cat("x0=", x0, "x1=", x1, "x2=", x2, "x3=", x3, "\n")
+##             cat("f1=", f1, "f2=", f2, "\n")
+##         }
+##         if (f2 < f1) {
+##             x0 <- x1
+##             x1 <- x2
+##             x2 <- R * x1 + C * x3
+##             f1 <- f2
+##             f2 <- GetRSSWST(ndata, threshold = x2, levels = levels,
+##                 type = type, filter.number = filter.number, family = family,
+##                 norm = norm, verbose = verbose, InverseType = InverseType)
+##             if (verbose == 2) {
+##                 cat("SSQ: ", signif(f2, digits = 3), "\n")
+##             }
+##             else if (verbose == 1)
+##                 cat(".")
+##             xkeep <- c(xkeep, x2)
+##             fkeep <- c(fkeep, f2)
+##             if (plot.it == TRUE)
+##                 text(x2, f2, lab = as.character(cnt))
+##             cnt <- cnt + 1
+##         }
+##         else {
+##             x3 <- x2
+##             x2 <- x1
+##             x1 <- R * x2 + C * x0
+##             f2 <- f1
+##             f1 <- GetRSSWST(ndata, threshold = x1, levels = levels,
+##                 type = type, filter.number = filter.number, family = family,
+##                 norm = norm, verbose = verbose, InverseType = InverseType)
+##             if (verbose == 2)
+##                 cat("SSQ: ", signif(f1, digits = 3), "\n")
+##             else if (verbose == 1)
+##                 cat(".")
+##             xkeep <- c(xkeep, x1)
+##             fkeep <- c(fkeep, f1)
+##             if (plot.it == TRUE)
+##                 text(x1, f1, lab = as.character(cnt))
+##             cnt <- cnt + 1
+##         }
+##     }
+##     if (f1 < f2)
+##         tmp <- x1
+##     else tmp <- x2
+##     x1 <- tmp/sqrt(1 - log(2)/log(length(ndata)))
+##     if (verbose == 1)
+##         cat("Correcting to ", x1, "\n")
+##     else if (verbose == 1)
+##         cat("\n")
+##     g <- sort.list(xkeep)
+##     xkeep <- xkeep[g]
+##     fkeep <- fkeep[g]
+##     if (verbose >= 1) {
+##         cat("Reconstructing CV \n")
+##     }
+##     nwstT <- threshold(nwst, type = type, levels = levels, policy = "manual",
+##         value = x1)
+##     nwstT <- threshold(nwstT, type = type, levels = nlevelsWT(nwstT) -
+##         1, policy = "universal", dev = uvdev)
+##     ## not sure why he does an extra universal threshold here!
+##     xvwr <- AvBasis.wst(nwstT)
+##     list(ndata = ndata, xvwr = xvwr, xvwrWSTt = nwstT, uvt = uv,
+##         xvthresh = x1, xkeep = xkeep, fkeep = fkeep)
+## }
 
+#' print.WST
+#' Print function for the WST object. Prints a brief summary of the wavelet transform.
+#'
+#' @param xwav WST object
+#'
 #'@export
 print.WST <- function(xwav){
     cat("--------------------------------------\n")
@@ -685,6 +739,15 @@ print.WST <- function(xwav){
     cat("--------------------------------------\n")
 }
 
+#' WSTtoDT
+#'
+#' Converts a WST object to a data.table, recording time (translate) and level information for each wavelet coefficient. This takes the wavelet vector out of its 'raw' form where the coefficients are unlabelled and even interleaved for the DWT, and puts them in a more user-friendly form for performing further analysis on wavelet coefficients.
+#' Used also for plotting.
+#'
+#' @param Xwav WST object
+#' @param scaling boolean determining whether we retain scaling coefficients (default TRUE)
+#' @param forPlotting boolean determining whether we keep the min/max values (default FALSE)
+#'
 #' @import data.table
 #' @export
 WSTtoDT <- function(Xwav, scaling = TRUE, forPlotting = FALSE){
@@ -747,10 +810,20 @@ WSTtoDT <- function(Xwav, scaling = TRUE, forPlotting = FALSE){
     return(xw_df)
 }
 
+#' WSTtoWavethresh
+#'
+#' Converts a WST object to a wavethresh object to use the wavethresh library. Three things to note on design differences between wavecuda and wavethresh:
+#' - WaveCUDA does not retain scaling coefficients not required for the transform but wavethresh does
+#' - wavethresh does not support the C6 wavelet
+#' - wavethresh uses a different ordering for the (time-ordered) MODWT coefficients
+#'
+#' @param XW WST object
+#' @param showWarnings Boolean option to show warnings on incompatibilities in conversions
+#'
 #' @import data.table
 #' @import wavethresh
 #' @export
-WSTtowavethresh <- function(XW, showWarnings = TRUE){
+WSTtoWavethresh <- function(XW, showWarnings = TRUE){
     xw_df <- WST.to.DT(XW)
     ## need scaling too :)
 

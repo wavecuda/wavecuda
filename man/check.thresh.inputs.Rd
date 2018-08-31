@@ -6,10 +6,11 @@
 Checks the inputs for thresholding and converts them into the required format for the library
 Internal function}
 \usage{
-check.thresh.inputs(xin, nlevels, transform.type, filter, hard.soft,
-  thresh, min.level, max.level)
+check.thresh.inputs(xwav, hard.soft, thresh, min.level, max.level)
 }
 \arguments{
+\item{xwav}{WST object}
+
 \item{hard.soft}{"hard" or "soft" thresholding}
 
 \item{thresh}{Threshold value}
@@ -17,8 +18,6 @@ check.thresh.inputs(xin, nlevels, transform.type, filter, hard.soft,
 \item{min.level}{Minimum level for thresholding}
 
 \item{max.level}{Maximum level for thresholding}
-
-\item{xwav}{WST object}
 }
 \description{
 check.thresh.inputs
