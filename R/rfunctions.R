@@ -242,19 +242,33 @@ return.trans <- function(arglist, argsin){
 
     ## modify to return transform vector always in same value
 
-  if(arglist$sense == 1){
+    if(arglist$sense == 1){
 
-  wvt_return <- structure(list("x" = argsin$x,
-                                 "ttype" = argsin$ttype,
-                                 "filt" = argsin$filter,
-                                 "filtlen" = arglist$filterlen,
-                                 "nlevels" = arglist$nlevels,
-                                 "len" = arglist$len,
-                                 "w" = ifelse(argsin$ttype == "DWT", arglist$x, arglist$xmod)),
-                            class = "WST")
-  }else{
-    wvt_return <- arglist$x
-  }
+        if(argsin$ttype == "DWT"){
+            wvt_return <- structure(list("x" = argsin$x,
+                                         "ttype" = argsin$ttype,
+                                         "filt" = argsin$filter,
+                                         "filtlen" = arglist$filterlen,
+                                         "nlevels" = arglist$nlevels,
+                                         "len" = arglist$len,
+                                         "w" = arglist$x),
+                                    class = "WST")
+        }else{
+            ## MODWT
+            wvt_return <- structure(list("x" = argsin$x,
+                                         "ttype" = argsin$ttype,
+                                         "filt" = argsin$filter,
+                                         "filtlen" = arglist$filterlen,
+                                         "nlevels" = arglist$nlevels,
+                                         "len" = arglist$len,
+                                         "w" = arglist$xmod),
+                                    class = "WST")
+
+            
+        }
+    }else{
+        wvt_return <- arglist$x
+    }
     return(wvt_return)
 }
 
@@ -302,6 +316,10 @@ CPUTransform <- function(xin, direction="FWD", nlevels=0, transform.type, filter
     args.in <- list(ttype=transform.type,
                     filter=filter)
 
+    if(direction == "FWD")
+        args.in$x = xin
+    ## if FWD transform, we add the input vector to the args.in list
+    
     arg.list <- check.trans.inputs(xin, direction, nlevels, transform.type, filter)
 
     arg.list <- .C("RcpuTransform",
@@ -346,6 +364,10 @@ GPUTransform <- function(xin, direction, nlevels, transform.type, filter){
 
     args.in <- list(ttype=transform.type,
                     filter=filter)
+
+    if(direction == "FWD")
+        args.in$x = xin
+    ## if FWD transform, we add the input vector to the args.in list
 
     arg.list <- check.trans.inputs(xin, direction, nlevels, transform.type, filter)
 
