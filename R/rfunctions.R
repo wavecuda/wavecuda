@@ -122,17 +122,32 @@ check.trans.inputs <- function(xin,direction,nlevels,transform.type,filter){
 #'
 #'
 prepare.wst.arg.list <- function(xwav){
-  ## prepares arg.list for reconstruction or thresholding
-  return(
-    list(x = ifelse(xwav$ttype == "DWT", xwav$x, xwav$w),
-         xmod = ifelse(xwav$ttype == "DWT", numeric(0), xwav$w),
-         len = xwav$len,
-         sense = 0, ## "BWD"
-         nlevels = xwav$nlevels,
-         ttype = ttype.convertor(xwav$ttype),
-         filt = filt.convertor(xwav$filt),
-         filtlen = xwav$filtlen)
-  )
+    ## prepares arg.list for reconstruction or thresholding
+    if(xwav$ttype == "DWT"){
+        return(
+            list(x = xwav$w,
+                 xmod = numeric(0),
+                 len = xwav$len,
+                 sense = 0, ## "BWD"
+                 nlevels = xwav$nlevels,
+                 ttype = ttype.convertor(xwav$ttype),
+                 filt = filt.convertor(xwav$filt),
+                 filtlen = xwav$filtlen)
+        )
+    }
+    if(xwav$ttype == "MODWT"){
+        return(
+            list(x = xwav$x,
+                 xmod = xwav$w,
+                 len = xwav$len,
+                 sense = 0, ## "BWD"
+                 nlevels = xwav$nlevels,
+                 ttype = ttype.convertor(xwav$ttype),
+                 filt = filt.convertor(xwav$filt),
+                 filtlen = xwav$filtlen)
+
+        )
+    }
 }
 
 #' check.thresh.inputs
@@ -152,7 +167,7 @@ check.thresh.inputs <- function(xwav, hard.soft,thresh,min.level,max.level){
     if( (!is.atomic(thresh)) | (length(thresh)>1) ) stop("Only scalar thresholds supported")
     if(thresh<=0) stop("Threshold must be greater than 0")
 
-    arg.list$thresh <- thresh
+    arg.list$thresh <- as.double(thresh)
 
     arg.list$sense <- NULL
     ## just removing this list element as not needed for thresholding
@@ -285,6 +300,7 @@ return.thresh <- function(xwav,arg.list){
   }else{
     xwav.thresh$w = arg.list$xmod
   }
+  return(xwav.thresh)
 }
 
 #' CPUTransform
@@ -489,12 +505,12 @@ CPUThreshold <- function(xwav,thresh,hard.soft,min.level,max.level){
     arg.list <- check.thresh.inputs(xwav,hard.soft,thresh,min.level,max.level)
 
     arg.list <- .C("RcpuThreshold",
-                   x=xwav$x,
-                   xmod=xwav$xmod,
+                   x=arg.list$x,
+                   xmod=arg.list$xmod,
                    len=as.integer(xwav$len),
                    nlevels=as.integer(xwav$nlevels),
-                   ttype=as.integer(xwav$ttype),
-                   filter=as.integer(xwav$filt),
+                   ttype=as.integer(arg.list$ttype),
+                   filter=as.integer(arg.list$filt),
                    filterlen=as.integer(arg.list$filtlen),
                    thresh=arg.list$thresh,
                    hardness=as.integer(arg.list$hardness),
