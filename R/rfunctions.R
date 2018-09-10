@@ -803,8 +803,13 @@ WSTtoDT <- function(Xwav, scaling = TRUE, forPlotting = FALSE){
     pad0 <- rep(0, Xwav$nlevels * 2)
     padl <- rep(1:Xwav$nlevels, each = 2) # levels
     padmm <- rep(1:2, Xwav$nlevels) # minmax
+    padct <- rep("d", Xwav$nlevels * 2) ## coefftype
 
     if(Xwav$ttype == "DWT"){
+        ## sep level list for d and s
+        ## s level list is just for top level
+        ## ll <- list()
+        ## ll[[Xwav$nlevels]] <- getCoeffLevel(Xwav,Xwav$nlevels,"s")
         xw_df <- data.table(W = c(Xwav$w, padNA),
                             Level = c(makeLevelNVec(Xwav,levelList), padl),
                             Translate = c(makeLevelTVec(Xwav,levelList), pad0),
@@ -836,7 +841,7 @@ WSTtoDT <- function(Xwav, scaling = TRUE, forPlotting = FALSE){
     xw_df[(Translate == 0) & (minmax == 1), W:=-W]
     ## set the min vals per level
     xw_df <- xw_df[Level >0]
-    ## filter -> will be done below
+    ## =====  NB : old filter for scaling coeffs  ======
 
     if(!forPlotting){
         xw_df <- xw_df[minmax == 0]
@@ -890,4 +895,16 @@ WSTtoWavethresh <- function(XW, showWarnings = TRUE){
     ## need to add scaling coeffs for top layers
 
     return(XW_wavethresh)
+}
+
+label.detail.scaling <- function(Xwav){
+    if(Xwav$ttype == "DWT"){
+        lab <- ifelse((1:Xwav$len) %% 2^(Xwav$nlevels == 1),
+                      "s",
+                      "d")
+    }
+    if(Xwav$ttype == "MODWT"){
+        lab <- rep(rep(c("s","d"),each = Xwav$len),times = Xwav$nlevels)
+    }
+    return(lab)
 }

@@ -8,6 +8,8 @@ x3 <- 1:16
 w1 <- GPUTransform(x1,"FWD",0,"DWT","Haar")
 w2 <- GPUTransform(x2,"FWD",0,"DWT","Haar")
 w3 <- GPUTransform(x3,"FWD",0,"DWT","Haar")
+w32 <- GPUTransform(x3,"FWD",2,"DWT","Haar")
+w4 <- GPUTransform(x3,"FWD",0,"MODWT","Haar")
 
 w3_df <- WST.to.DT(w3)
 nw3 <- WST.to.wavethresh(w3)
