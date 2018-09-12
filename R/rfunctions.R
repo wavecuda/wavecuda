@@ -899,7 +899,7 @@ WSTtoWavethresh <- function(XW, showWarnings = TRUE){
 
 label.detail.scaling <- function(Xwav){
     if(Xwav$ttype == "DWT"){
-        lab <- ifelse((1:Xwav$len) %% 2^(Xwav$nlevels == 1),
+        lab <- ifelse(((1:Xwav$len) %% 2^(Xwav$nlevels) == 1),
                       "s",
                       "d")
     }
@@ -907,4 +907,55 @@ label.detail.scaling <- function(Xwav){
         lab <- rep(rep(c("s","d"),each = Xwav$len),times = Xwav$nlevels)
     }
     return(lab)
+}
+
+
+WSTtoDTnew <- function(Xwav, scaling = TRUE, forPlotting = FALSE){
+    levelList <- sapply(X = 1:Xwav$nlevels, FUN = function(l) getCoeffLevel(Xwav,l,"d"), simplify = F)
+
+    if(forPlotting)
+        scaling <- FALSE
+
+    ## we make placeholders for min/max treatment
+    ## because we can't plot y_free with symmetric axes
+    ## so we create dummy rows at the end of the data frame
+    ## all with translate value of 0
+    ## and initialise these with NA for W
+    padNA <- rep(NA, Xwav$nlevels * 2)
+    pad0 <- rep(0, Xwav$nlevels * 2)
+    padl <- rep(1:Xwav$nlevels, each = 2) # levels
+    padmm <- rep(1:2, Xwav$nlevels) # minmax
+    padct <- rep("d", Xwav$nlevels * 2) ## coefftype
+
+    if(Xwav$ttype == "DWT"){
+        xw_df <- data.table(W = c(Xwav$w, padNA),
+                            CoeffType = c(label.detail.scaling(Xwav),padct),
+                            Level = c(rep(1,Xwav$len),padl),
+                            Translate = c(rep(seq(0.5,Xwav$len/2,1),each=2),pad0))
+
+        if(Xwav$nlevels > 1){
+            for(l in (2:Xwav$nlevels)){
+                ## we loop through the levels for the details
+                levelRowIDs <- getCoeffLevel(Xwav,l,"d")
+                ## we write the updated level
+                xw_df[levelRowIDs, Level := l]
+                ## we write the updated translate
+                translates <- seq(from = 2^(l-2), to = Xwav$len/2, by = 2^(l-1))
+                xw_df[levelRowIDs, Translate := translates]
+            }
+
+            ## then we add the scalings
+            levelRowIDs <- getCoeffLevel(Xwav,l,"s")
+            xw_df[levelRowIDs, Level := l]
+            xw_df[levelRowIDs, Translate := translates]
+        }
+
+        ## now just functionalise
+    }
+
+    ## add MODWT version. Should be much easier!
+    ## translate is c(rep(1:len, 2 * nlevels), pad)
+    ## level is c(rep(1:nlevels, len), pad)
+
+    return(xw_df)
 }
