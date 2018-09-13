@@ -28,10 +28,10 @@ Supports Haar, D4, C6 and LA8 filters.
 Allows the user to specify number of levels of transform required. Note that the maximum number of levels implemented is \eqn{\log_2{n} - b+1} where \eqn{n} is the length of the input vector and \eqn{b = ceiling (\log_2{L})} where \eqn{L} is the filter length. This means that we only allow transformations up to the level where the filter does not wrap around the coefficients more than once: with the Haar filter we do the full dyadic transform, whereas with the LA8 filter we stop after filtering 8 coefficients.
 }
 \details{
-The DWT is transformed in-place after copying the input vector, whereas the MODWT requires extra memory allocation. The structure of the transformed DWT vector is the standard interleaved form. The structure of the transformed MODWT vector is \eqn{n} scaling coefficients then detail coefficients, concatenated sequentially for each layer. The best way to access the coefficients for each level is via \code{\link{WST.to.DT}}.
+The DWT is transformed in-place after copying the input vector, whereas the MODWT requires extra memory allocation. The structure of the transformed DWT vector is the standard interleaved form. The structure of the transformed MODWT vector is \eqn{n} scaling coefficients then detail coefficients, concatenated sequentially for each layer. The best way to access the coefficients for each level is via \code{\link{WSTtoDT}}.
 
 This function allows forwards or backwards transforms from a vector input for full flexibility. However, it is recommended to do the backwards transform using the Reconstruct functions which take a WST object as the only argument.
 }
 \seealso{
-\code{\link{CPUTransform}}, \code{\link{GPUReconstruct}}, \code{\link{CPUThreshold}}, \code{\link{GPUSmooth}}, \code{\link{WST.to.DT}}
+\code{\link{CPUTransform}}, \code{\link{GPUReconstruct}}, \code{\link{CPUThreshold}}, \code{\link{GPUSmooth}}, \code{\link{WSTtoDT}}
 }
