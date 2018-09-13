@@ -8,6 +8,7 @@ x3 <- 1:16
 x4 <- wmtsa::make.signal("doppler", n = 1024, snr = 5)
 x4 <- x4@data
 
+w1 <- GPUTransform(x1,"FWD",0,"DWT","D4")
 w1 <- GPUTransform(x1,"FWD",0,"DWT","Haar")
 w2 <- GPUTransform(x2,"FWD",0,"DWT","Haar")
 w3 <- GPUTransform(x3,"FWD",0,"DWT","Haar")
@@ -16,6 +17,13 @@ w33 <- GPUTransform(x3,"FWD",3,"DWT","Haar")
 w4 <- GPUTransform(x3,"FWD",0,"MODWT","Haar")
 w5 <- GPUTransform(x4, "FWD", 0, "DWT", "Haar")
 w6 <- GPUTransform(x4, "FWD", 0, "MODWT", "Haar")
+w7 <- GPUTransform(x3,"FWD",0,"DWT","D4")
+w8 <- GPUTransform(x3,"FWD",0,"DWT","C6")
+w9 <- GPUTransform(x3,"FWD",0,"DWT","LA8")
+w10 <- CPUTransform(x3,"FWD",0,"DWT","D4") 
+w11 <- CPUTransform(x3,"FWD",0,"DWT","C6") 
+w12 <- CPUTransform(x3,"FWD",0,"DWT","LA8")
+
 
 plot(w5)
 plot(w6)

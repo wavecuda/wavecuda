@@ -35,4 +35,6 @@ static __device__ void lift_cyc_5(real* xsh, const int ish, const uint sk, const
 static __device__ void lift_cyc_6(real* xsh, const int ish, const uint sk, const short int sense);
 
 
+int C6CUDA_sh_ml2_streams(real* x_h, real* x_d, uint len, short int sense, uint nlevels, cudaStream_t stream);
+
 #endif //ifndef

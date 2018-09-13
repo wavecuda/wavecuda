@@ -21,11 +21,17 @@ int transform(cuwst *w,short sense, cudaStream_t stream){
       ret = HaarCUDAMLv2(w->x_h,w->x_d,w->len,sense,w->levels,stream);
       break;
     case DAUB4:
+      ret = Daub4CUDA_sh_ml2_streams(w->x_h,w->x_d,w->len,sense,w->levels,stream);
       //ret = Daub4(w->x,w->len,sense,w->levels);
-      printf("\nNeed to edit Daub4 CUDA function appropriately like Haar\n");
       break;
     case HAARNOHOST:
       ret = HaarCUDAMLv3(w->x_d,w->len,sense,w->levels,stream);
+      break;
+    case C6F:
+      ret = C6CUDA_sh_ml2_streams(w->x_h,w->x_d,w->len,sense,w->levels,stream);
+      break;
+    case LA8F:
+      ret = LA8CUDA_sh_ml2_streams(w->x_h,w->x_d,w->len,sense,w->levels,stream);
       break;
     default:
       printf("\nUnrecognised filter\n");

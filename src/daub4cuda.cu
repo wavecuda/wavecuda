@@ -1248,6 +1248,138 @@ __global__ void Daub4_kernel_shared_b_ml2(real* x, const uint len, const uint sk
 
 }
 
+// ##############################
+// Daub4
+// - shared memory
+// - multi-level
+// - streams and memcopy
+// ##############################
+
+int Daub4CUDA_sh_ml2_streams(real* x_h, real* x_d, uint len, short int sense, uint nlevels, cudaStream_t stream){
+  // sense '1' is forwards, '0' is backwards, anything else is sideways
+  uint filterlength=4;
+  uint ret;
+  nlevels = check_len_levels(len,nlevels,filterlength);
+  if(nlevels == 0) return(1); //NB nlevels=0 when calling this function means that check_len_levels will calculate the maximum number of levels - in which case it will return this number
+  // however, it the case of an error, it will return 0 - because any strictly positive integer would be valid. & nlevels is unsigned.
+  cudaMemcpyAsync(x_d,x_h,len*sizeof(real),HTD,stream);
+  switch(sense){
+    // since the streams have not yet been implemented,
+    // we run with the non-streams version for now
+  case 1:
+    ret = fDaub4CUDAsh_ml2(x_d,len,1,nlevels);
+    break;
+  case 0:
+    ret = bDaub4CUDAsh_ml2(x_d,len,1<<(nlevels-1));
+    break;
+  default:
+    printf("\nSense must be 1 for forward or 0 for backwards. We don't do sideways.\n");
+    return(1);
+  }
+  cudaMemcpyAsync(x_h,x_d,len*sizeof(real),DTH,stream);
+  // we copy x_d back into x_h
+  // we have to do this after the DWT, as the transform is in-place
+  return(ret);
+}
+
+int fDaub4CUDAsh_ml2_streams(real* x_d, real* bdrs, uint len, uint skip, uint nlevels, cudaStream_t stream){
+  if(skip < (1 << nlevels)){
+    cudaError_t cuderr;
+    int threadsPerBlock;
+    int blocksPerGrid;
+ 
+    uint levels=1; //leave at 1. This is initialisation for level variable!
+
+    // printf("\n### threadsperblock = %i, blockspergrid = %i ####\n",threadsPerBlock,blocksPerGrid);
+
+    while((levels+1<=2)&&((skip<<(levels+1))<=(1 << nlevels))){ // levels+1<=k gives L, #levels to loop over
+      // take skip to power levels+1 as filter of length 4
+      levels+=1;
+    }
+    
+
+    if (levels==1){
+      // deal with bdrs
+      //real* bdrs; // vector of boundary points - ensures independence of loops
+      uint lenb = max((len<<1)/(skip*BLOCK_SECT2),4); // length of bdrs vector
+      int tPB_bd = BS_BD;
+      int bPG_bd = max(((lenb>>2) + BS_BD - 1) / BS_BD,1);
+      // cudaMalloc((void **)&bdrs,lenb*sizeof(real)); // need to move this outside
+
+
+      get_bdrs_sh<<<bPG_bd, tPB_bd, 0, stream>>>(x_d,len,skip,bdrs,lenb); //we copy the boundary points into a vector
+      cuderr = cudaGetLastError();
+      if (cuderr != cudaSuccess)
+	{
+	  fprintf(stderr, "CUDA error in transform in get boundaries sh (error code %s)!\n", cudaGetErrorString(cuderr));
+	  exit(EXIT_FAILURE);
+	}
+      // cudaDeviceSynchronize();
+      cudaStreamSynchronize(stream);
+      
+      threadsPerBlock = BLOCK_SIZE2;
+      blocksPerGrid =(len/(skip<<1) + BLOCK_SECT2 - 1) / BLOCK_SECT2;      
+
+      Daub4_kernel_shared_f<<<blocksPerGrid, threadsPerBlock, 0, stream>>>(x_d,len,skip,bdrs,lenb);
+
+      // cudaFree(bdrs); // will have to remove this!
+
+    }
+    else{
+      // deal with bdrs
+      // real* bdrs; // vector of boundary points - ensures independence of loops
+      uint k = 6;
+      uint lenb = max((len*k)/(skip*BLOCK_SECT_ML2),2*k); // length of bdrs vector
+      int tPB_bd = BS_BD;
+      int bPG_bd = max(((lenb/(2*k)) + BS_BD - 1) / BS_BD,1);
+      // cudaMalloc((void **)&bdrs,lenb*sizeof(real)); // need to move this outside
+      get_bdrs_sh_k<<<bPG_bd, tPB_bd, 0, stream>>>(x_d,len,skip,bdrs,lenb,k,BLOCK_SECT_ML2); //we copy the boundary points into a vector
+      cuderr = cudaGetLastError();
+      if (cuderr != cudaSuccess)
+	{
+	  fprintf(stderr, "CUDA error in transform in get boundaries sh (error code %s)!\n", cudaGetErrorString(cuderr));
+	  exit(EXIT_FAILURE);
+	}
+      // cudaDeviceSynchronize();
+      cudaStreamSynchronize(stream);
+      
+      threadsPerBlock = BLOCK_SIZE_ML2;
+      blocksPerGrid =(len/(skip<<1) + BLOCK_SECT_ML2 - 1) / BLOCK_SECT_ML2;
+
+      // printf("\nlevels=2");
+      // printveccu<<<1,1>>>(bdrs,lenb);
+      // cudaDeviceSynchronize();
+      // printf("\n### threadsperblock = %i, blockspergrid = %i ####\n",threadsPerBlock,blocksPerGrid);
+                  
+      Daub4_kernel_shared_f_ml2<<<blocksPerGrid, threadsPerBlock, 0, stream>>>(x_d,len,skip,bdrs,lenb);
+      // cudaFree(bdrs); // will have to remove this!
+
+    }
+
+    cuderr = cudaGetLastError();
+    if (cuderr != cudaSuccess)
+      {
+        fprintf(stderr, "CUDA error in transform in fDaub4 sh (error code %s)!\n", cudaGetErrorString(cuderr));
+        exit(EXIT_FAILURE);
+      }
+    //cudaDeviceSynchronize();
+
+    // //print stuff...
+    // printf("CUDA: len=%u,skip=%u\n",len,skip);
+    // printveccu<<<1,1>>>(x_d,len);
+
+    //cudaDeviceSynchronize();
+    cudaStreamSynchronize(stream);
+    
+    return(fDaub4CUDAsh_ml2_streams(x_d, bdrs, len,skip<<levels,nlevels,stream));
+
+  }
+  return(0);
+}
+
+
+
+
 
 // ########################################################################
 // Now we repeat the previous functions of using shared memory & 2 levels

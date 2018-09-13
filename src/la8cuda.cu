@@ -876,3 +876,30 @@ static __device__ void lift_cyc_6(real* xsh, const int ish, const uint sk, const
 //   }
 //   return(9999);
 // }
+
+
+
+int LA8CUDA_sh_ml2_streams(real* x_h, real* x_d, uint len, short int sense, uint nlevels, cudaStream_t stream){
+  // sense '1' is forwards, '0' is backwards, anything else is sideways
+  uint filterlength=8;
+  uint ret;
+  nlevels = check_len_levels(len,nlevels,filterlength);
+  if(nlevels == 0) return(1); //NB nlevels=0 when calling this function means that check_len_levels will calculate the maximum number of levels - in which case it will return this number
+  // however, it the case of an error, it will return 0 - because any strictly positive integer would be valid. & nlevels is unsigned.
+  cudaMemcpyAsync(x_d,x_h,len*sizeof(real),HTD,stream);
+  switch(sense){
+  case 1:
+    ret = fLA8CUDAsh_ml2(x_d,len,1,nlevels);
+    break;
+  case 0:
+    ret = bLA8CUDAsh_ml2(x_d,len,1<<(nlevels-1));
+    break;
+  default:
+    printf("\nSense must be 1 for forward or 0 for backwards. We don't do sideways.\n");
+    return(1);
+  }
+  cudaMemcpyAsync(x_h,x_d,len*sizeof(real),DTH,stream);
+  // we copy x_d back into x_h
+  // we have to do this after the DWT, as the transform is in-place
+  return(ret);
+}

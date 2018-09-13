@@ -24,6 +24,12 @@ int transform(wst *w,short sense){
     case DAUB4MP:
       ret = lompDaub4(w->x,w->len,sense,w->levels);
       break;
+    case C6F:
+      ret = C6(w->x,w->len,sense,w->levels);
+    break;
+    case LA8F:
+      ret = LA8(w->x,w->len,sense,w->levels);
+    break;
     default:
       printf("\nUnrecognised filter\n");
       return(1);

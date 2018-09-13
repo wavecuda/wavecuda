@@ -4,6 +4,8 @@
 #include "wvtheads.h"
 #include "daub4cuda.cuh"
 #include "haarcuda.cuh"
+#include "c6cuda.cuh"
+#include "la8cuda.cuh"
 
 int transform(cuwst *w,short sense);
 // when we don't want to run with streams

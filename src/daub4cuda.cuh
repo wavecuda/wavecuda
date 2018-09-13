@@ -51,6 +51,12 @@ __global__ void Daub4_kernel_shared_f_io(real* x_in, real* x_out, const uint len
 
 __global__ void Daub4_kernel_shared_b_io(real* x_in, real* x_out, const uint len, const uint skip);
 
+// daub4 with sh mem, multi lev, steams, async mem copy
+int Daub4CUDA_sh_ml2_streams(real* x_h, real* x_d, uint len, short int sense, uint nlevels, cudaStream_t stream);
+// int Daub4CUDA_sh_ml2_streams(real* x_h, real* x_d, real* bdrs_d, uint len, short int sense, uint nlevels, cudaStream_t stream);
+int fDaub4CUDAsh_ml2_streams(real* x_d, real* bdrs_d, uint len, uint skip, uint nlevels, cudaStream_t stream);
+
+
 int Daub4CUDA_sh_ml2_io(real* x_d_in, real* x_d_out, uint len, short int sense, uint nlevels);
 // 1 kernel, in/output vectors (avoiding boundary vector), shared memory, multi-level
 int fDaub4CUDAsh_ml2_io(real* x_d_in, real* x_d_out, uint len, uint skip, uint nlevels);
