@@ -777,18 +777,7 @@ print.WST <- function(xwav){
     cat("--------------------------------------\n")
 }
 
-#' WSTtoDT
-#'
-#' Converts a WST object to a data.table, recording time (translate) and level information for each wavelet coefficient. This takes the wavelet vector out of its 'raw' form where the coefficients are unlabelled and even interleaved for the DWT, and puts them in a more user-friendly form for performing further analysis on wavelet coefficients.
-#' Used also for plotting.
-#'
-#' @param Xwav WST object
-#' @param scaling boolean determining whether we retain scaling coefficients (default TRUE)
-#' @param forPlotting boolean determining whether we keep the min/max values (default FALSE)
-#'
-#' @import data.table
-#' @export
-WSTtoDT <- function(Xwav, scaling = TRUE, forPlotting = FALSE){
+WSTtoDTold <- function(Xwav, scaling = TRUE, forPlotting = FALSE){
     levelList <- sapply(X = 1:Xwav$nlevels, FUN = function(l) getCoeffLevel(Xwav,l,"d"), simplify = F)
 
     if(forPlotting)
@@ -867,7 +856,7 @@ WSTtoDT <- function(Xwav, scaling = TRUE, forPlotting = FALSE){
 #' @import wavethresh
 #' @export
 WSTtoWavethresh <- function(XW, showWarnings = TRUE){
-    xw_df <- WST.to.DT(XW)
+    xw_df <- WSTtoDT(XW)
     ## need scaling too :)
 
     filter_number = switch(XW$filt,"Haar"=1,"D4"=2,"C6"=3, "LA"=4)
@@ -888,15 +877,22 @@ WSTtoWavethresh <- function(XW, showWarnings = TRUE){
     for(l in 1:XW$nlevels){
         XW_wavethresh <- putD(XW_wavethresh,
                               level = XW_wavethresh$nlevels - l,
-                              v = xw_df[Level == l, W])
+                              v = xw_df[(Level == l) & (CoeffType == "d"), W])
     }
-
-    warning("Haven't yet implemented scaling coeffs transfer")
-    ## need to add scaling coeffs for top layers
+    XW_wavethresh <- putC(XW_wavethresh,
+                          level = XW_wavethresh$nlevels - l,
+                          v = xw_df[(Level == l) & (CoeffType == "s"), W])
 
     return(XW_wavethresh)
 }
 
+#' label.detail.scaling
+#'
+#' Returns a vector of "d" and "s" corresponding to detail and scaling labels for the coefficients.
+#' Internal function.
+#'
+#'@param Xwav WST object
+#'
 label.detail.scaling <- function(Xwav){
     if(Xwav$ttype == "DWT"){
         lab <- ifelse(((1:Xwav$len) %% 2^(Xwav$nlevels) == 1),
@@ -909,8 +905,18 @@ label.detail.scaling <- function(Xwav){
     return(lab)
 }
 
-
-WSTtoDTnew <- function(Xwav, scaling = TRUE, forPlotting = FALSE){
+#' WSTtoDT
+#'
+#' Converts a WST object to a data.table, recording time (translate) and level information for each wavelet coefficient. This takes the wavelet vector out of its 'raw' form where the coefficients are unlabelled and even interleaved for the DWT, and puts them in a more user-friendly form for performing further analysis on wavelet coefficients.
+#' Used also for plotting.
+#'
+#' @param Xwav WST object
+#' @param scaling boolean determining whether we retain scaling coefficients (default TRUE)
+#' @param forPlotting boolean determining whether we keep the min/max values (default FALSE)
+#'
+#' @import data.table
+#' @export
+WSTtoDT <- function(Xwav, scaling = TRUE, forPlotting = FALSE){
     levelList <- sapply(X = 1:Xwav$nlevels, FUN = function(l) getCoeffLevel(Xwav,l,"d"), simplify = F)
 
     if(forPlotting)
@@ -931,9 +937,14 @@ WSTtoDTnew <- function(Xwav, scaling = TRUE, forPlotting = FALSE){
         xw_df <- data.table(W = c(Xwav$w, padNA),
                             CoeffType = c(label.detail.scaling(Xwav),padct),
                             Level = c(rep(1,Xwav$len),padl),
-                            Translate = c(rep(seq(0.5,Xwav$len/2,1),each=2),pad0))
-
+                            Translate = c(rep(seq(0.5,Xwav$len/2,1),each=2),pad0),
+                            ## we initialise the values for level & translate
+                            ## they should be valid for half or all points
+                            minmax = c(rep(0,length(Xwav$w)),padmm))
+        
         if(Xwav$nlevels > 1){
+            ## if nlevels > 1, then we need to overwrite
+            ## levels and translates
             for(l in (2:Xwav$nlevels)){
                 ## we loop through the levels for the details
                 levelRowIDs <- getCoeffLevel(Xwav,l,"d")
@@ -957,5 +968,31 @@ WSTtoDTnew <- function(Xwav, scaling = TRUE, forPlotting = FALSE){
     ## translate is c(rep(1:len, 2 * nlevels), pad)
     ## level is c(rep(1:nlevels, len), pad)
 
+    if(Xwav$ttype == "MODWT"){
+        xw_df <- data.table(W = c(Xwav$w, padNA),
+                            CoeffType = c(label.detail.scaling(Xwav),padct),
+                            Level = c(rep(1:Xwav$nlevels,each=2*Xwav$len),padl),
+                            Translate = c(rep(seq(1:Xwav$len),2*Xwav$nlevels),pad0),
+                            minmax = c(rep(0,length(Xwav$w)),padmm))
+    }
+    ## sort the min/max values (for plotting)
+    xw_df[(CoeffType == "d"), W := replace(W, (Translate == 0), max(abs(W), na.rm = T)),
+          by = c("Level")]
+    ## replace the created NA values with max abs per level
+    xw_df[(Translate == 0) & (minmax == 1), W:=-W]
+    ## set the min vals per level
+
+    if(!forPlotting){
+        xw_df <- xw_df[minmax == 0]
+        ## remove min max extra values
+        xw_df[,minmax := NULL]
+        ## remove min max column
+    }
+
+    if(!scaling){
+        xw_df <- xw_df[CoeffType == "d"]
+        ## filter to only the detail coeffs
+    }
+    
     return(xw_df)
 }
