@@ -108,7 +108,7 @@ check.trans.inputs <- function(xin,direction,nlevels,transform.type,filter){
         if( (direction=="BWD") & (ttype>0) ) stop("Probably got an error of infinite length: len = ",len)
     }
     if( (nlevels != round(nlevels)) | (nlevels<0) | (nlevels>maxlevels) ){
-        stop("nlevels should be an integer [whole number] between 1 and ",log2(len))
+        stop("nlevels should be an integer [whole number] between 1 and ",maxlevels)
     }
 
     list(x=x,xmod=xmod,len=len,sense=sense,nlevels=nlevels,ttype=ttype,filt=filt,filtlen=filtlen)
@@ -587,6 +587,8 @@ GPUSmooth <- function(xin,nlevels,transform.type,filter,thresh.type,thresh=NULL,
 
     if(thresh.type=="univ") stop("Universal threshold not [yet] implemented on GPU, as it's probably quicker on CPU")
 
+    if(filter %in% c("D4", "C6", "LA8")) stop("Other filters not yet implemented for smoothing")
+    
     arg.list <- .C("RgpuSmooth",
                    x=arg.list$x,
                    len=as.integer(arg.list$len),
