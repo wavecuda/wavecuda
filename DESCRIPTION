@@ -1,0 +1,17 @@
+Package: wavecuda
+Title: GPU accelerated wavelet tranforms
+Version: 0.1
+Authors@R: "Julian Waton <wavecuda@imperial.ac.uk> [aut, cre]"
+Description: This package performs wavelet transforms using CPU and GPU,
+    along with some basic plotting and thresholding. Noteably, we implement GPU-
+    accelerated wavelet cross validation.
+Depends:
+    R (>= 3.2.2)
+Imports:
+    data.table,
+    ggplot2,
+    wavethresh
+License: GPL
+LazyData: true
+RoxygenNote: 6.1.0
+Encoding: UTF-8
