@@ -64,3 +64,67 @@ x3r <- CPUReconstruct(w3t)
 ## - with check.thresh.inputs - done
 ## - finish documentation, adding reconstruct - done
 ## - check that wavecuda_demo in thesis2/figures works
+
+## ####################
+## Checking wavecuda functions...
+
+library(dplyr)
+library(purrr)
+
+x <- wmtsa::make.signal("doppler", n = 1024, snr = Inf)
+x <- x@data
+
+filters <- c("Haar", "D4", "C6", "LA8")
+ttypes <- c("DWT", "MODWT")
+## funcs <- c(list(CPUTransform),list(GPUTransform))
+
+## might do this later with purrr, but for now stick to a plain old loop
+
+## for(filt in filters){
+##     for(tt in ttypes){
+
+safeCPUTransform <- safely(CPUTransform)
+safeGPUTransform <- safely(GPUTransform)
+
+optTab <- expand.grid(Filter = filters, Ttype = ttypes, stringsAsFactors = FALSE) %>%
+    as.tbl()
+
+cpuTab <- optTab %>%
+    mutate(CPUT = map2(.x = Ttype, .y = Filter, .f = function(X,Y){safeCPUTransform(x, direction = "FWD", nlevels = 0, transform.type = X, filter = Y)})) %>%
+    mutate(CPUerror = map(.x = CPUT, .f = function(X) X$error))
+
+cpuTab %>%
+    select(Filter, Ttype, CPUerror)
+        
+
+gpuTab <- optTab %>%
+    mutate(GPUT = map2(.x = Ttype, .y = Filter, .f = function(X,Y){safeGPUTransform(x, direction = "FWD", nlevels = 0, transform.type = X, filter = Y)})) %>%
+    mutate(GPUerror = map(.x = GPUT, .f = function(X) X$error))
+
+gpuTab %>%
+    select(Filter, Ttype, GPUerror)
+
+plot(GPUTransform(x, "FWD", 0, "DWT", "LA8"))
+plot(GPUTransform(x, "FWD", 0, "DWT", "C6"))
+plot(GPUTransform(x, "FWD", 0, "DWT", "D4"))
+plot(GPUTransform(x, "FWD", 0, "DWT", "Haar"))
+
+plot(CPUTransform(x, "FWD", 0, "DWT", "LA8")) ## looks shifted
+plot(CPUTransform(x, "FWD", 0, "DWT", "C6")) ## looks shifted
+plot(CPUTransform(x, "FWD", 0, "DWT", "D4"))
+plot(CPUTransform(x, "FWD", 0, "DWT", "Haar"))
+
+plot(x, type = "l")
+
+plot(CPUSmooth(x, nlevels = 10, transform.type = "DWT", filter = "Haar", thresh.type = "univ", hard.soft = "hard", min.level = 1, max.level = 10),type = "l")
+
+plot(CPUReconstruct(CPUTransform(x, "FWD", 0, "DWT", "D4")))
+
+xn <- wmtsa::make.signal("doppler", n = 1024, snr = 5)
+xn <- xn@data
+
+xSmoothed <- GPUSmooth(xn, nlevels = 10, transform.type = "DWT", filter = "Haar", thresh.type = "cv", hard.soft = "hard", min.level = 1, max.level = 6) ## seg faults
+
+xSmoothed <- GPUSmooth(xn, nlevels = 8, transform.type = "DWT", filter = "C6", thresh.type = "cv", hard.soft = "hard", min.level = 1, max.level = 8)
+
+xSmoothed <- CPUSmooth(xn, nlevels = 10, transform.type = "DWT", filter = "Haar", thresh.type = "cv", hard.soft = "hard", min.level = 3, max.level = 8) ## doesn't seg fault!

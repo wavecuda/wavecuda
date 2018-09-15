@@ -111,6 +111,10 @@ check.trans.inputs <- function(xin,direction,nlevels,transform.type,filter){
         stop("nlevels should be an integer [whole number] between 1 and ",maxlevels)
     }
 
+    ## MODWT not yet implemented for C6 or LA8
+    if((transform.type == "MODWT") & (filter %in% c("C6","LA8")))
+        stop("C6 and LA8 MODWT not yet implemented")
+    
     list(x=x,xmod=xmod,len=len,sense=sense,nlevels=nlevels,ttype=ttype,filt=filt,filtlen=filtlen)
 }
 
@@ -587,7 +591,7 @@ GPUSmooth <- function(xin,nlevels,transform.type,filter,thresh.type,thresh=NULL,
 
     if(thresh.type=="univ") stop("Universal threshold not [yet] implemented on GPU, as it's probably quicker on CPU")
 
-    if(filter %in% c("D4", "C6", "LA8")) stop("Other filters not yet implemented for smoothing")
+    if(filter %in% c("D4", "C6", "LA8")) stop("D4, C6, LA8 filters not yet implemented for GPU smoothing")
     
     arg.list <- .C("RgpuSmooth",
                    x=arg.list$x,
