@@ -9,9 +9,9 @@ An NVIDIA CUDA-enabled GPU is required for running the GPU transforms, and the C
 - Clone the repository
 - Navigate to the src directory, then compile with `make`.
 - Navigate to the wavecuda package directory. Install the package with:
-    - devtools::document()
-    - devtools::build()
-    - devtools::install()
+  - devtools::document()
+  - devtools::build()
+  - devtools::install()
 
 ## Basic demonstration of functionality
 
